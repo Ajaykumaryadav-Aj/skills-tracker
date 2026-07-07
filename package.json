@@ -1,0 +1,23 @@
+{
+  "name": "skills-tracker",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "npm ci --prefix server && npm ci --prefix client && npm ci --prefix admin",
+    "build": "npm run build:client && npm run build:admin",
+    "build:client": "npm --prefix client run build",
+    "build:admin": "npm --prefix admin run build",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev:admin": "npm --prefix admin run dev",
+    "start": "npm --prefix server start",
+    "db:indexes": "npm --prefix server run db:indexes",
+    "docker:build": "docker compose --env-file .env.docker build",
+    "docker:up": "docker compose --env-file .env.docker up -d",
+    "docker:down": "docker compose --env-file .env.docker down"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}

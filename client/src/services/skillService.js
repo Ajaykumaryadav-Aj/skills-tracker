@@ -1,0 +1,18 @@
+import api from '../api/axios'
+
+export const getAllSkills = (params) => api.get('/skills', { params })
+export const getSkillStats = () => api.get('/skills/stats')
+export const getSkill = (id) => api.get(`/skills/${id}`)
+export const createSkill = (payload) => api.post('/skills', payload)
+export const updateSkill = (id, payload) => api.put(`/skills/${id}`, payload)
+export const deleteSkill = (id) => api.delete(`/skills/${id}`)
+export const toggleArchiveSkill = (id, payload) => api.patch(`/skills/${id}/archive`, payload)
+export const toggleFavoriteSkill = (id, payload) => api.patch(`/skills/${id}/favorite`, payload)
+export const duplicateSkill = (id) => api.post(`/skills/${id}/duplicate`)
+export const getTopics = (skillId, params) => api.get(`/skills/${skillId}/topics`, { params })
+export const getTopic = (skillId, topicId) => api.get(`/skills/${skillId}/topics/${topicId}`)
+export const addTopic = (skillId, payload) => api.post(`/skills/${skillId}/topics`, payload)
+export const updateTopic = (skillId, topicId, payload) => api.put(`/skills/${skillId}/topics/${topicId}`, payload)
+export const deleteTopic = (skillId, topicId) => api.delete(`/skills/${skillId}/topics/${topicId}`)
+export const duplicateTopic = (skillId, topicId) => api.post(`/skills/${skillId}/topics/${topicId}/duplicate`)
+export const reorderTopics = (skillId, topicIds) => api.patch(`/skills/${skillId}/topics/reorder`, { topicIds })
