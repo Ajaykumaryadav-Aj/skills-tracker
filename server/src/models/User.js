@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
     lastLogin: { type: Date },
     avatar: {
       url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
+      secureUrl: { type: String, default: '' },
+      resourceType: { type: String, default: '' },
+      originalFilename: { type: String, default: '' },
+      public_id: { type: String, default: '' },
       filename: { type: String, default: '' },
       mimetype: { type: String, default: '' },
       size: { type: Number, default: 0 },

@@ -2,6 +2,10 @@ import LearningLog from '../models/LearningLog.js'
 import Roadmap from '../models/Roadmap.js'
 import Skill from '../models/Skill.js'
 import User from '../models/User.js'
+import AuditLog from '../models/AuditLog.js'
+import AIHistory from '../models/AIHistory.js'
+import { getUploadsStorageSize } from '../services/userProfile.service.js'
+import { logAuditEvent } from '../utils/auditLogger.js'
 
 const maxPageLimit = 50
 const userSortOptions = {
@@ -173,6 +177,8 @@ export const deleteUser = async (req, res, next) => {
       User.deleteOne({ _id: userId }),
     ])
 
+    await logAuditEvent(req, req.currentUser.id, 'admin-delete-user', { deletedUserId: userId, userEmail: user.email })
+
     res.json({ message: 'User and related data deleted' })
   } catch (err) {
     next(err)
@@ -314,6 +320,104 @@ export const getDashboardAnalytics = async (req, res, next) => {
       skillStatusBreakdown: bucketCounts(statusBreakdown),
       recentUsers: recentUsers.map((user) => ({ ...user, role: user.role || 'user' })),
       recentSkills,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getAuditLogs = async (req, res, next) => {
+  try {
+    const {
+      search = '',
+      action = '',
+      page: requestedPage,
+      limit: requestedLimit,
+    } = req.query
+
+    const page = getPositiveInteger(requestedPage, 1)
+    const limit = Math.min(getPositiveInteger(requestedLimit, 20), maxPageLimit)
+    const query = {}
+
+    if (action) {
+      query.action = action
+    }
+
+    if (search) {
+      const pattern = new RegExp(escapeRegex(search), 'i')
+      const matchingUsers = await User.find({
+        $or: [{ name: pattern }, { email: pattern }]
+      }).select('_id').lean()
+      const userIds = matchingUsers.map(u => u._id)
+      
+      query.$or = [
+        { userId: { $in: userIds } },
+        { action: new RegExp(escapeRegex(search), 'i') }
+      ]
+    }
+
+    const [logs, total] = await Promise.all([
+      AuditLog.find(query)
+        .populate('userId', 'name email')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      AuditLog.countDocuments(query),
+    ])
+
+    res.json({
+      logs,
+      pagination: buildPagination({ page, limit, total, isPaginated: true }),
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getAIUsageStats = async (req, res, next) => {
+  try {
+    const usage = await AIHistory.aggregate([
+      {
+        $group: {
+          _id: { type: '$type', provider: '$provider' },
+          count: { $sum: 1 },
+          lastUsed: { $max: '$createdAt' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          type: '$_id.type',
+          provider: '$_id.provider',
+          count: 1,
+          lastUsed: 1
+        }
+      },
+      { $sort: { count: -1 } }
+    ])
+
+    res.json({ usage })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getStorageUsageStats = async (req, res, next) => {
+  try {
+    const localSize = await getUploadsStorageSize()
+    const dbSizeResult = await User.aggregate([
+      { $match: { 'avatar.url': { $ne: '' } } },
+      { $group: { _id: null, totalSize: { $sum: '$avatar.size' } } }
+    ])
+    const dbSize = dbSizeResult[0]?.totalSize || 0
+    const totalSize = dbSize || localSize
+    const totalAvatars = await User.countDocuments({ 'avatar.url': { $ne: '' } })
+    
+    res.json({
+      avatarStorageBytes: totalSize,
+      avatarStorageMb: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
+      totalAvatars,
     })
   } catch (err) {
     next(err)

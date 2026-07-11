@@ -19,15 +19,36 @@ const assertEmailConfigured = () => {
 }
 
 const sendMail = async ({ to, subject, html }) => {
-  assertEmailConfigured()
-  const info = await transporter.sendMail({
-    from: `"Skills Tracker" <${env.emailUser}>`,
-    to,
-    subject,
-    html,
-  })
-  logger.info({ messageId: info.messageId, to }, 'Email sent')
-  return info
+  try {
+    assertEmailConfigured()
+    const info = await transporter.sendMail({
+      from: `"Skills Tracker" <${env.emailUser}>`,
+      to,
+      subject,
+      html,
+    })
+    logger.info({ messageId: info.messageId, to }, 'Email sent')
+    return info
+  } catch (error) {
+    logger.error({ err: error, to, subject }, 'Failed to send email via SMTP')
+    
+    // Fallback for non-production environments to allow testing and development
+    if (env.nodeEnv !== 'production') {
+      logger.warn('--- EMAIL FALLBACK (NON-PRODUCTION) ---')
+      logger.warn(`To: ${to}`)
+      logger.warn(`Subject: ${subject}`)
+      
+      // Attempt to extract the OTP from the email HTML template
+      const otpMatch = html.match(/>(\d{6})</)
+      const otp = otpMatch ? otpMatch[1] : 'N/A'
+      
+      logger.warn(`Generated OTP: ${otp}`)
+      logger.warn('----------------------------------------')
+      return { messageId: 'mock-message-id-' + Date.now() }
+    }
+    
+    throw error
+  }
 }
 
 export const sendOTPEmail = ({ to, name, otp }) =>

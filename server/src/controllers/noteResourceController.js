@@ -1,5 +1,6 @@
 import Skill from '../models/Skill.js'
 import { isRichTextBlank, sanitizeRichText } from '../utils/richText.js'
+import { uploadStream, deleteFile } from '../services/storage.service.js'
 
 const resourceTypes = new Set(['article', 'video', 'course', 'documentation', 'tutorial', 'other'])
 

@@ -12,7 +12,9 @@ import errorHandler from './middlewares/errorMiddleware.js'
 import notFound from './middlewares/notFoundMiddleware.js'
 import { apiLimiter } from './middlewares/rateLimiters.js'
 import rejectUnsafeRequestKeys from './middlewares/requestSecurity.js'
+import xssSanitizer from './middlewares/xssMiddleware.js'
 import routes from './routes/index.js'
+import { swaggerUi, specs } from './config/swagger.js'
 
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
@@ -36,12 +38,25 @@ const corsOptions = {
 }
 
 app.use(requestLogger)
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "*"],
+      connectSrc: ["'self'", "*"],
+    }
+  }
+}))
 app.use(cors(corsOptions))
 app.use(compression({ threshold: 1024 }))
 app.use(express.json({ limit: env.jsonLimit, strict: true }))
 app.use(express.urlencoded({ extended: false, limit: env.jsonLimit }))
 app.use(rejectUnsafeRequestKeys)
+app.use(xssSanitizer)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
   fallthrough: false,
   immutable: true,
@@ -57,6 +72,25 @@ app.get('/health', (req, res) => {
     requestId: req.id,
   })
 })
+
+app.get('/readiness', (req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1
+  if (databaseReady) {
+    return res.status(200).json({
+      status: 'ready',
+      database: 'connected',
+      timestamp: new Date()
+    })
+  } else {
+    return res.status(503).json({
+      status: 'not_ready',
+      database: 'disconnected',
+      timestamp: new Date()
+    })
+  }
+})
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
 
 app.use('/api', apiLimiter, invalidateCacheOnMutation, routes)
 app.use(notFound)

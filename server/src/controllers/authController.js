@@ -11,6 +11,7 @@ import { getServerAssignedRole } from '../utils/adminAccess.js'
 import { successResponse } from '../utils/apiResponse.js'
 import httpError from '../utils/httpError.js'
 import { hashToken } from '../utils/token.js'
+import { logAuditEvent } from '../utils/auditLogger.js'
 
 const createToken = (user) => {
   const payload = { id: user._id, email: user.email, role: user.role || 'user' }
@@ -65,6 +66,8 @@ export const register = async (req, res, next) => {
     user.emailVerified = false
     await user.save()
 
+    await logAuditEvent(req, user._id, 'auth-register-initiated', { email: user.email })
+
     const otp = existingUser
       ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
       : await createOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
@@ -89,6 +92,7 @@ export const verifyRegistrationOTP = async (req, res, next) => {
     if (user.emailVerified) {
       user.lastLogin = new Date()
       await user.save()
+      await logAuditEvent(req, user._id, 'auth-register-verify-already-done', { email: user.email })
       return issueAuthResponse(res, user, 'Email already verified.')
     }
 
@@ -99,6 +103,8 @@ export const verifyRegistrationOTP = async (req, res, next) => {
     user.lastLogin = now
     user.role = getServerAssignedRole(user.email)
     await user.save()
+
+    await logAuditEvent(req, user._id, 'auth-register-completed', { email: user.email })
 
     return issueAuthResponse(res, user, 'Email verified successfully.')
   } catch (err) {
@@ -137,10 +143,16 @@ export const login = async (req, res, next) => {
   try {
     const email = normalizeEmail(req.body.email)
     const user = await User.findOne({ email })
-    if (!user) throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+    if (!user) {
+      await logAuditEvent(req, null, 'auth-login-failed', { email })
+      throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+    }
 
     const match = await bcrypt.compare(req.body.password, user.password)
-    if (!match) throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+    if (!match) {
+      await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email })
+      throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+    }
 
     if (!user.emailVerified) {
       throw httpError(403, 'Please verify your email before logging in.', 'EMAIL_NOT_VERIFIED')
@@ -152,6 +164,8 @@ export const login = async (req, res, next) => {
     }
     user.lastLogin = new Date()
     await user.save()
+
+    await logAuditEvent(req, user._id, 'auth-login-success', { email: user.email, role: user.role })
 
     return issueAuthResponse(res, user, 'Logged in successfully.')
   } catch (err) {
@@ -204,6 +218,8 @@ export const resetPassword = async (req, res, next) => {
       OTP.deleteOne({ _id: otpRecord._id }),
     ])
 
+    await logAuditEvent(req, user._id, 'auth-password-reset', { email: user.email })
+
     return successResponse(res, 'Password reset successfully.', { email: user.email })
   } catch (err) {
     next(err)
@@ -220,6 +236,11 @@ export const logout = async (req, res, next) => {
     const exp = decoded?.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 1000 * 60 * 60 * 24)
 
     await Token.create({ tokenHash: hashToken(token), expiresAt: exp })
+
+    if (decoded?.id) {
+      await logAuditEvent(req, decoded.id, 'auth-logout', { email: decoded.email })
+    }
+
     return successResponse(res, 'Logged out successfully.')
   } catch (err) {
     next(err)

@@ -4,6 +4,9 @@ import {
   getDashboardAnalytics,
   getSkillsStatistics,
   getUsers,
+  getAuditLogs,
+  getAIUsageStats,
+  getStorageUsageStats,
 } from '../controllers/adminController.js'
 import auth from '../middlewares/authMiddleware.js'
 import { requireAdmin } from '../middlewares/roleMiddleware.js'
@@ -19,5 +22,8 @@ router.get('/analytics', cacheResponse(), getDashboardAnalytics)
 router.get('/skills-statistics', cacheResponse(), getSkillsStatistics)
 router.get('/users', adminUsersQueryValidator, validate, cacheResponse(), getUsers)
 router.delete('/users/:userId', deleteUserValidator, validate, deleteUser)
+router.get('/audit-logs', getAuditLogs)
+router.get('/ai-usage', getAIUsageStats)
+router.get('/storage-usage', getStorageUsageStats)
 
 export default router

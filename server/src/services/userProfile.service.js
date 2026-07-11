@@ -34,3 +34,18 @@ export const deleteAvatarFile = async (filename) => {
     if (error.code !== 'ENOENT') throw error
   }
 }
+
+export const getUploadsStorageSize = async () => {
+  try {
+    const files = await fs.readdir(avatarUploadDir)
+    let totalSize = 0
+    for (const file of files) {
+      const stats = await fs.stat(path.join(avatarUploadDir, file))
+      totalSize += stats.size
+    }
+    return totalSize
+  } catch (error) {
+    console.error('Error calculating storage size:', error)
+    return 0
+  }
+}

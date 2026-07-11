@@ -186,6 +186,8 @@ export const createSkill = async (req, res, next) => {
       slug: await uniqueSlugForUser({ userId: req.user.id, title: payload.title }),
     })
 
+    await logAuditEvent(req, req.user.id, 'skill-create', { skillId: skill._id, title: skill.title })
+
     res.status(201).json({ skill })
   } catch (err) {
     next(err)
@@ -330,6 +332,9 @@ export const updateSkill = async (req, res, next) => {
     )
 
     if (!skill) return res.status(404).json({ message: 'Skill not found' })
+    
+    await logAuditEvent(req, req.user.id, 'skill-update', { skillId: skill._id, title: skill.title, updates })
+
     res.json({ skill })
   } catch (err) {
     next(err)
@@ -485,6 +490,8 @@ export const addTopic = async (req, res, next) => {
     skill.topics.push(topicMirrorPayload(topic))
     await syncSkillProgress(skill)
 
+    await logAuditEvent(req, req.user.id, 'topic-create', { skillId: skill._id, topicId: topic._id, title: topic.title })
+
     res.status(201).json({ topic, skill })
   } catch (err) {
     next(err)
@@ -511,6 +518,8 @@ export const updateTopic = async (req, res, next) => {
     Object.assign(topic, topicMirrorPayload({ ...updatedTopic.toObject(), notes: topic.notes, resources: topic.resources }))
     await syncSkillProgress(skill)
 
+    await logAuditEvent(req, req.user.id, 'topic-update', { skillId: skill._id, topicId: updatedTopic._id, title: updatedTopic.title, updates })
+
     res.json({ topic: updatedTopic, skill })
   } catch (err) {
     next(err)
@@ -529,6 +538,8 @@ export const deleteTopic = async (req, res, next) => {
     await Topic.findOneAndUpdate(topicOwnerFilter(req.user.id, id, { _id: topicId }), { deletedAt: new Date() })
     topic.deleteOne()
     await syncSkillProgress(skill)
+
+    await logAuditEvent(req, req.user.id, 'topic-delete', { skillId: skill._id, topicId, title: topic.title })
 
     res.json({ message: 'Topic removed', skill })
   } catch (err) {

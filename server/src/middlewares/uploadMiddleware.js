@@ -12,14 +12,6 @@ fs.mkdirSync(avatarUploadDir, { recursive: true })
 
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarUploadDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase()
-    cb(null, `${req.user.id}-${Date.now()}${extension}`)
-  },
-})
-
 const fileFilter = (req, file, cb) => {
   const extension = path.extname(file.originalname).toLowerCase().replace('.', '')
   if (!allowedMimeTypes.has(file.mimetype) || !['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
@@ -29,7 +21,7 @@ const fileFilter = (req, file, cb) => {
 }
 
 export const uploadAvatar = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // Max 5MB for avatar
 }).single('avatar')
