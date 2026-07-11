@@ -4,6 +4,7 @@ import Revision from '../models/Revision.js'
 import Activity from '../models/Activity.js'
 import { generateRevisionScheduleForTopic } from '../services/revision.service.js'
 import { awardXp, evaluateAchievements } from '../services/gamification.service.js'
+import { logAuditEvent } from '../utils/auditLogger.js'
 
 const skillStatusOptions = SKILL_STATUSES
 const topicStatusOptions = ['Not Started', 'Learning', 'Revision', 'Completed']
@@ -205,6 +206,8 @@ export const createSkill = async (req, res, next) => {
       sourceId: skill._id,
     }).catch(() => null)
 
+    await logAuditEvent(req, req.user.id, 'skill-create', { skillId: skill._id, title: skill.title })
+
     res.status(201).json({ skill })
   } catch (err) {
     next(err)
@@ -349,6 +352,9 @@ export const updateSkill = async (req, res, next) => {
     )
 
     if (!skill) return res.status(404).json({ message: 'Skill not found' })
+    
+    await logAuditEvent(req, req.user.id, 'skill-update', { skillId: skill._id, title: skill.title, updates })
+
     res.json({ skill })
   } catch (err) {
     next(err)
@@ -365,6 +371,9 @@ export const deleteSkill = async (req, res, next) => {
     if (!skill) return res.status(404).json({ message: 'Skill not found' })
     await Topic.updateMany(topicOwnerFilter(req.user.id, req.params.id), { deletedAt: new Date() })
     await Revision.deleteMany({ userId: req.user.id, skillId: req.params.id })
+
+    await logAuditEvent(req, req.user.id, 'skill-delete', { skillId: skill._id, title: skill.title })
+
     res.json({ message: 'Skill deleted' })
   } catch (err) {
     next(err)
@@ -536,6 +545,8 @@ export const addTopic = async (req, res, next) => {
     }
     await evaluateAchievements(req.user.id)
 
+    await logAuditEvent(req, req.user.id, 'topic-create', { skillId: skill._id, topicId: topic._id, title: topic.title })
+
     res.status(201).json({ topic, skill })
   } catch (err) {
     next(err)
@@ -581,6 +592,8 @@ export const updateTopic = async (req, res, next) => {
       }).catch(() => null)
     }
 
+    await logAuditEvent(req, req.user.id, 'topic-update', { skillId: skill._id, topicId: updatedTopic._id, title: updatedTopic.title, updates })
+
     res.json({ topic: updatedTopic, skill })
   } catch (err) {
     next(err)
@@ -600,6 +613,8 @@ export const deleteTopic = async (req, res, next) => {
     await Revision.deleteMany({ userId: req.user.id, skillId: id, topicId })
     topic.deleteOne()
     await syncSkillProgress(skill)
+
+    await logAuditEvent(req, req.user.id, 'topic-delete', { skillId: skill._id, topicId, title: topic.title })
 
     res.json({ message: 'Topic removed', skill })
   } catch (err) {

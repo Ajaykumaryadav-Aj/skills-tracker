@@ -14,14 +14,6 @@ fs.mkdirSync(knowledgeUploadDir, { recursive: true })
 
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarUploadDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase()
-    cb(null, `${req.user.id}-${Date.now()}${extension}`)
-  },
-})
-
 const fileFilter = (req, file, cb) => {
   const extension = path.extname(file.originalname).toLowerCase().replace('.', '')
   if (!allowedMimeTypes.has(file.mimetype) || !['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
@@ -31,39 +23,29 @@ const fileFilter = (req, file, cb) => {
 }
 
 export const uploadAvatar = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }, // Max 5MB for avatar
 }).single('avatar')
 
 const knowledgeMimeTypes = new Set([
   'application/pdf',
   'image/jpeg',
   'image/png',
-  'image/webp',
-  'application/zip',
-  'application/x-zip-compressed',
+  'image/webp'
 ])
 
-const knowledgeStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, knowledgeUploadDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname).toLowerCase()
-    cb(null, `${req.user.id}-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`)
-  },
-})
-
 const knowledgeFileFilter = (req, file, cb) => {
-  const extension = path.extname(file.originalname).toLowerCase()
-  const allowedExtensions = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.zip'])
+  const extension = path.extname(file.originalname).toLowerCase().replace('.', '')
+  const allowedExtensions = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp'])
   if (!knowledgeMimeTypes.has(file.mimetype) || !allowedExtensions.has(extension)) {
-    return cb(httpError(400, 'Attachment must be a PDF, image, or ZIP file', 'INVALID_ATTACHMENT_TYPE'))
+    return cb(httpError(400, 'Attachment must be a PDF or image file (jpg, jpeg, png, webp)', 'INVALID_ATTACHMENT_TYPE'))
   }
   return cb(null, true)
 }
 
 export const uploadKnowledgeAttachment = multer({
-  storage: knowledgeStorage,
+  storage: multer.memoryStorage(),
   fileFilter: knowledgeFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 }, // General limit 10MB (images strictly limited to 5MB in controller)
 }).single('file')

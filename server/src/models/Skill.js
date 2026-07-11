@@ -17,6 +17,11 @@ const resourceSchema = new mongoose.Schema(
     favorite: { type: Boolean, default: false },
     file: {
       url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
+      secureUrl: { type: String, default: '' },
+      resourceType: { type: String, default: '' },
+      originalFilename: { type: String, default: '' },
+      public_id: { type: String, default: '' },
       filename: { type: String, default: '' },
       originalName: { type: String, default: '' },
       mimetype: { type: String, default: '' },

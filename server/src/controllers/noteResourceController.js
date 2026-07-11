@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import Skill from '../models/Skill.js'
 import { isRichTextBlank, sanitizeRichText } from '../utils/richText.js'
+import { uploadStream, deleteFile } from '../services/storage.service.js'
 
 const resourceTypes = new Set(['YouTube', 'Documentation', 'GitHub', 'Website', 'PDF', 'Course', 'article', 'video', 'course', 'documentation', 'tutorial', 'other'])
 
@@ -338,17 +339,42 @@ export const addResource = async (req, res, next) => {
     const result = await findTopicForUser({ userId: req.user.id, skillId, topicId })
     if (respondWithTopicError(res, result)) return
 
-    const filePayload = req.file ? {
-      url: publicUploadPath(req.file.filename),
-      type: req.file.mimetype === 'application/pdf' ? 'PDF' : 'Website',
-      file: {
-        url: publicUploadPath(req.file.filename),
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-      },
-    } : {}
+    let filePayload = {}
+    if (req.file) {
+      // Validate size limits
+      if (req.file.mimetype.startsWith('image/')) {
+        if (req.file.size > 5 * 1024 * 1024) throw httpError(400, 'Image must be less than 5MB', 'IMAGE_TOO_LARGE')
+      } else if (req.file.mimetype === 'application/pdf') {
+        if (req.file.size > 10 * 1024 * 1024) throw httpError(400, 'PDF must be less than 10MB', 'PDF_TOO_LARGE')
+      }
+
+      const resType = req.file.mimetype === 'application/pdf' ? 'raw' : 'image'
+      const folderPath = req.file.mimetype === 'application/pdf' ? 'skills-tracker/pdfs' : 'skills-tracker/resources'
+
+      const uploadResult = await uploadStream(req.file.buffer, {
+        folder: folderPath,
+        resourceType: resType,
+        originalFilename: req.file.originalname
+      })
+
+      filePayload = {
+        url: uploadResult.secureUrl,
+        type: req.file.mimetype === 'application/pdf' ? 'PDF' : 'Website',
+        file: {
+          url: uploadResult.secureUrl,
+          publicId: uploadResult.publicId,
+          secureUrl: uploadResult.secureUrl,
+          resourceType: uploadResult.resourceType,
+          originalFilename: req.file.originalname,
+          public_id: uploadResult.publicId,
+          filename: '',
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: uploadResult.size || req.file.size,
+        },
+      }
+    }
+
     const resource = { ...normalizeResourcePayload({ ...req.body, file: req.file }), ...filePayload }
     result.topic.resources.push(resource)
 
@@ -397,15 +423,44 @@ export const updateResource = async (req, res, next) => {
 
     const updates = normalizeResourcePayload(req.body, { partial: true })
     if (req.file) {
-      removeUploadedFile(resource.file?.filename)
-      updates.url = publicUploadPath(req.file.filename)
+      // Validate size limits
+      if (req.file.mimetype.startsWith('image/')) {
+        if (req.file.size > 5 * 1024 * 1024) throw httpError(400, 'Image must be less than 5MB', 'IMAGE_TOO_LARGE')
+      } else if (req.file.mimetype === 'application/pdf') {
+        if (req.file.size > 10 * 1024 * 1024) throw httpError(400, 'PDF must be less than 10MB', 'PDF_TOO_LARGE')
+      }
+
+      // Clean up old file
+      const oldPublicId = resource.file?.publicId || resource.file?.public_id
+      if (oldPublicId) {
+        const oldResType = resource.file.resourceType || (resource.file.mimetype === 'application/pdf' ? 'raw' : 'image')
+        await deleteFile(oldPublicId, { resourceType: oldResType }).catch(() => {})
+      } else if (resource.file?.filename) {
+        removeUploadedFile(resource.file.filename)
+      }
+
+      const resType = req.file.mimetype === 'application/pdf' ? 'raw' : 'image'
+      const folderPath = req.file.mimetype === 'application/pdf' ? 'skills-tracker/pdfs' : 'skills-tracker/resources'
+
+      const uploadResult = await uploadStream(req.file.buffer, {
+        folder: folderPath,
+        resourceType: resType,
+        originalFilename: req.file.originalname
+      })
+
+      updates.url = uploadResult.secureUrl
       updates.type = req.file.mimetype === 'application/pdf' ? 'PDF' : (updates.type || resource.type || 'Website')
       updates.file = {
-        url: publicUploadPath(req.file.filename),
-        filename: req.file.filename,
+        url: uploadResult.secureUrl,
+        publicId: uploadResult.publicId,
+        secureUrl: uploadResult.secureUrl,
+        resourceType: uploadResult.resourceType,
+        originalFilename: req.file.originalname,
+        public_id: uploadResult.publicId,
+        filename: '',
         originalName: req.file.originalname,
         mimetype: req.file.mimetype,
-        size: req.file.size,
+        size: uploadResult.size || req.file.size,
       }
     }
     Object.assign(resource, updates)
@@ -444,7 +499,15 @@ export const deleteResource = async (req, res, next) => {
     const resource = result.topic.resources.id(resourceId)
     if (!resource) return res.status(404).json({ message: 'Resource not found' })
 
-    removeUploadedFile(resource.file?.filename)
+    // Clean up old file
+    const oldPublicId = resource.file?.publicId || resource.file?.public_id
+    if (oldPublicId) {
+      const oldResType = resource.file.resourceType || (resource.file.mimetype === 'application/pdf' ? 'raw' : 'image')
+      await deleteFile(oldPublicId, { resourceType: oldResType }).catch(() => {})
+    } else if (resource.file?.filename) {
+      removeUploadedFile(resource.file.filename)
+    }
+
     resource.deleteOne()
     await result.skill.save()
 

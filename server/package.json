@@ -11,10 +11,12 @@
     "restart": "node src/scripts/freePort.js && node src/server.js",
     "seed": "node src/scripts/seedRoadmaps.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
-    "db:indexes": "node src/scripts/syncIndexes.js"
+    "db:indexes": "node src/scripts/syncIndexes.js",
+    "test": "node --test src/__tests__/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.10.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -27,7 +29,9 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.3",
     "pino": "^10.3.1",
-    "pino-http": "^11.0.0"
+    "pino-http": "^11.0.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "eslint": "^8.50.0",
