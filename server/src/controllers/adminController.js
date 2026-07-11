@@ -1,0 +1,321 @@
+import LearningLog from '../models/LearningLog.js'
+import Roadmap from '../models/Roadmap.js'
+import Skill from '../models/Skill.js'
+import User from '../models/User.js'
+
+const maxPageLimit = 50
+const userSortOptions = {
+  latest: { createdAt: -1 },
+  name: { name: 1 },
+  email: { email: 1 },
+}
+
+const getPositiveInteger = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildPagination = ({ page, limit, total }) => {
+  const totalPages = Math.max(Math.ceil(total / limit), 1)
+  return {
+    page,
+    limit,
+    total,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  }
+}
+
+const bucketCounts = (items, labelKey = '_id', valueKey = 'count') =>
+  items.reduce((acc, item) => {
+    acc[item[labelKey] || 'Unknown'] = item[valueKey]
+    return acc
+  }, {})
+
+export const getUsers = async (req, res, next) => {
+  try {
+    const {
+      search = '',
+      role = '',
+      sort = 'latest',
+      page: requestedPage,
+      limit: requestedLimit,
+    } = req.query
+
+    const page = getPositiveInteger(requestedPage, 1)
+    const limit = Math.min(getPositiveInteger(requestedLimit, 10), maxPageLimit)
+    const selectedRole = String(role).trim()
+    const searchTerm = String(search).trim()
+    const query = {}
+
+    if (selectedRole) {
+      if (!['admin', 'user'].includes(selectedRole)) {
+        return res.status(400).json({ message: 'Invalid role filter' })
+      }
+      query.role = selectedRole
+    }
+
+    if (searchTerm) {
+      const pattern = new RegExp(escapeRegex(searchTerm), 'i')
+      query.$or = [{ name: pattern }, { email: pattern }]
+    }
+
+    const sortConfig = userSortOptions[sort] || userSortOptions.latest
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-password')
+        .sort(sortConfig)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(query),
+    ])
+
+    const userIds = users.map((user) => user._id)
+    const [skillStats, logStats, roadmapStats] = await Promise.all([
+      Skill.aggregate([
+        { $match: { user: { $in: userIds } } },
+        {
+          $group: {
+            _id: '$user',
+            skillCount: { $sum: 1 },
+            topicCount: { $sum: { $size: { $ifNull: ['$topics', []] } } },
+            completedSkills: {
+              $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] },
+            },
+            averageProgress: { $avg: '$progress' },
+            lastActivity: { $max: '$updatedAt' },
+          },
+        },
+      ]),
+      LearningLog.aggregate([
+        { $match: { user: { $in: userIds } } },
+        {
+          $group: {
+            _id: '$user',
+            logCount: { $sum: 1 },
+            learningMinutes: { $sum: '$duration' },
+          },
+        },
+      ]),
+      Roadmap.aggregate([
+        { $match: { user: { $in: userIds } } },
+        {
+          $group: {
+            _id: '$user',
+            roadmapCount: { $sum: 1 },
+          },
+        },
+      ]),
+    ])
+
+    const statsByUser = new Map()
+    for (const item of [...skillStats, ...logStats, ...roadmapStats]) {
+      const key = String(item._id)
+      statsByUser.set(key, { ...(statsByUser.get(key) || {}), ...item })
+    }
+
+    const enrichedUsers = users.map((user) => {
+      const stats = statsByUser.get(String(user._id)) || {}
+      return {
+        ...user,
+        role: user.role || 'user',
+        stats: {
+          skillCount: stats.skillCount || 0,
+          topicCount: stats.topicCount || 0,
+          completedSkills: stats.completedSkills || 0,
+          averageProgress: Math.round(stats.averageProgress || 0),
+          logCount: stats.logCount || 0,
+          learningMinutes: stats.learningMinutes || 0,
+          roadmapCount: stats.roadmapCount || 0,
+          lastActivity: stats.lastActivity || user.updatedAt,
+        },
+      }
+    })
+
+    res.json({
+      users: enrichedUsers,
+      pagination: buildPagination({ page, limit, total }),
+      filters: {
+        roles: ['admin', 'user'],
+        sortOptions: Object.keys(userSortOptions),
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    if (String(req.currentUser.id) === userId) {
+      return res.status(400).json({ message: 'Admins cannot delete their own account' })
+    }
+
+    const user = await User.findById(userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    if ((user.role || 'user') === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' })
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: 'Cannot delete the only admin account' })
+      }
+    }
+
+    await Promise.all([
+      Skill.deleteMany({ user: userId }),
+      LearningLog.deleteMany({ user: userId }),
+      Roadmap.deleteMany({ user: userId }),
+      User.deleteOne({ _id: userId }),
+    ])
+
+    res.json({ message: 'User and related data deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getSkillsStatistics = async (req, res, next) => {
+  try {
+    const [overview, byStatus, byCategory, topicStatusBreakdown, progressBuckets] = await Promise.all([
+      Skill.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalSkills: { $sum: 1 },
+            averageProgress: { $avg: '$progress' },
+            totalTopics: { $sum: { $size: { $ifNull: ['$topics', []] } } },
+            notesCount: {
+              $sum: {
+                $size: {
+                  $filter: {
+                    input: { $ifNull: ['$topics', []] },
+                    as: 'topic',
+                    cond: { $gt: [{ $strLenCP: { $ifNull: ['$$topic.notes.content', ''] } }, 0] },
+                  },
+                },
+              },
+            },
+            resourceCount: {
+              $sum: {
+                $sum: {
+                  $map: {
+                    input: { $ifNull: ['$topics', []] },
+                    as: 'topic',
+                    in: { $size: { $ifNull: ['$$topic.resources', []] } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ]),
+      Skill.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Skill.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }, { $sort: { count: -1 } }]),
+      Skill.aggregate([
+        { $unwind: '$topics' },
+        { $group: { _id: '$topics.status', count: { $sum: 1 } } },
+      ]),
+      Skill.aggregate([
+        {
+          $bucket: {
+            groupBy: '$progress',
+            boundaries: [0, 25, 50, 75, 101],
+            default: 'Unknown',
+            output: { count: { $sum: 1 } },
+          },
+        },
+      ]),
+    ])
+
+    res.json({
+      overview: {
+        totalSkills: overview[0]?.totalSkills || 0,
+        averageProgress: Math.round(overview[0]?.averageProgress || 0),
+        totalTopics: overview[0]?.totalTopics || 0,
+        notesCount: overview[0]?.notesCount || 0,
+        resourceCount: overview[0]?.resourceCount || 0,
+      },
+      byStatus: bucketCounts(byStatus),
+      byCategory: bucketCounts(byCategory),
+      topicStatusBreakdown: bucketCounts(topicStatusBreakdown),
+      progressBuckets: progressBuckets.map((bucket) => ({
+        range: bucket._id === 'Unknown' ? 'Unknown' : `${bucket._id}-${bucket._id === 75 ? 100 : bucket._id + 24}`,
+        count: bucket.count,
+      })),
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getDashboardAnalytics = async (req, res, next) => {
+  try {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const [
+      totalUsers,
+      adminUsers,
+      totalSkills,
+      totalRoadmaps,
+      logTotals,
+      activeUsersFromSkills,
+      activeUsersFromLogs,
+      recentUsers,
+      recentSkills,
+      statusBreakdown,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: 'admin' }),
+      Skill.countDocuments(),
+      Roadmap.countDocuments(),
+      LearningLog.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalLogs: { $sum: 1 },
+            learningMinutes: { $sum: '$duration' },
+          },
+        },
+      ]),
+      Skill.distinct('user', { updatedAt: { $gte: thirtyDaysAgo } }),
+      LearningLog.distinct('user', { createdAt: { $gte: thirtyDaysAgo } }),
+      User.find().select('-password').sort({ createdAt: -1 }).limit(5).lean(),
+      Skill.find()
+        .select('title category status progress user updatedAt')
+        .populate('user', 'name email')
+        .sort({ updatedAt: -1 })
+        .limit(5)
+        .lean(),
+      Skill.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    ])
+
+    const activeUserIds = new Set([
+      ...activeUsersFromSkills.map(String),
+      ...activeUsersFromLogs.map(String),
+    ])
+
+    res.json({
+      summary: {
+        totalUsers,
+        adminUsers,
+        regularUsers: Math.max(totalUsers - adminUsers, 0),
+        totalSkills,
+        totalRoadmaps,
+        totalLogs: logTotals[0]?.totalLogs || 0,
+        learningMinutes: logTotals[0]?.learningMinutes || 0,
+        activeUsers30d: activeUserIds.size,
+      },
+      skillStatusBreakdown: bucketCounts(statusBreakdown),
+      recentUsers: recentUsers.map((user) => ({ ...user, role: user.role || 'user' })),
+      recentSkills,
+    })
+  } catch (err) {
+    next(err)
+  }
+}

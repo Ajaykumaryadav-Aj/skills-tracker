@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: skills-tracker-api
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: MONGO_URI
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUST_PROXY
+        value: "true"
+      - key: MONGO_MAX_POOL_SIZE
+        value: "20"
+      - key: API_RATE_LIMIT_MAX
+        value: "300"
+      - key: AUTH_RATE_LIMIT_MAX
+        value: "10"
+      - key: API_CACHE_ENABLED
+        value: "true"
+      - key: API_CACHE_TTL_SECONDS
+        value: "30"
+      - key: LOG_LEVEL
+        value: info
