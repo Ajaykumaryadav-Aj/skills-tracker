@@ -25,7 +25,10 @@ if (env.trustProxy) app.set('trust proxy', 1)
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || env.corsOrigins.includes(origin)) return callback(null, true)
+    if (!origin) return callback(null, true)
+    if (env.corsOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true)
+    }
     const error = new Error('Origin is not allowed')
     error.status = 403
     error.code = 'CORS_FORBIDDEN'
