@@ -63,6 +63,7 @@ const env = Object.freeze({
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   adminEmails: (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean),
   corsOrigins: origins,
+  corsAllowVercelPreviews: toBoolean(process.env.CORS_ALLOW_VERCEL_PREVIEWS, false),
   trustProxy: toBoolean(process.env.TRUST_PROXY, isProduction),
   jsonLimit: process.env.JSON_BODY_LIMIT || '100kb',
   apiRateLimitWindowMs: toInteger(process.env.API_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),

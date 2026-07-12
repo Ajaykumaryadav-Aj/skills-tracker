@@ -6,6 +6,7 @@ import mongoose from 'mongoose'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import env from './config/env.js'
+import logger from './config/logger.js'
 import { requestLogger } from './config/logger.js'
 import { invalidateCacheOnMutation } from './middlewares/cacheMiddleware.js'
 import errorHandler from './middlewares/errorMiddleware.js'
@@ -19,17 +20,37 @@ import { swaggerUi, specs } from './config/swagger.js'
 const app = express()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
 app.disable('x-powered-by')
 app.set('etag', 'strong')
 if (env.trustProxy) app.set('trust proxy', 1)
 
+// ── CORS Configuration ──────────────────────────────────────────────────────
+// Log allowed origins at startup so we can verify from Render logs
+logger.info(
+  { allowedOrigins: env.corsOrigins, allowVercelPreviews: env.corsAllowVercelPreviews },
+  'CORS: allowed origins'
+)
+
+const isOriginAllowed = (origin) => {
+  // Explicitly whitelisted origins
+  if (env.corsOrigins.includes(origin)) return true
+  // Optional: allow ALL *.vercel.app preview deployments (set CORS_ALLOW_VERCEL_PREVIEWS=true on Render)
+  if (env.corsAllowVercelPreviews && /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/.test(origin)) return true
+  return false
+}
+
 const corsOptions = {
   origin(origin, callback) {
-    // Allow server-to-server calls and same-origin (no Origin header)
+    // Allow server-to-server / curl / same-origin (no Origin header)
     if (!origin) return callback(null, true)
-    if (env.corsOrigins.includes(origin)) {
+
+    if (isOriginAllowed(origin)) {
+      logger.debug({ origin }, 'CORS: origin allowed')
       return callback(null, true)
     }
+
+    logger.warn({ origin, allowedOrigins: env.corsOrigins }, 'CORS: origin blocked')
     const error = new Error(`CORS: origin '${origin}' is not allowed`)
     error.status = 403
     error.code = 'CORS_FORBIDDEN'
@@ -39,10 +60,19 @@ const corsOptions = {
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id'],
   exposedHeaders: ['RateLimit', 'RateLimit-Policy', 'X-Request-Id', 'X-Cache'],
   credentials: false, // Using Authorization header, not cookies
+  preflightContinue: false,
+  optionsSuccessStatus: 204, // Some browsers (Safari) need 204 for preflight
   maxAge: 86400,
 }
 
 app.use(requestLogger)
+
+// IMPORTANT: CORS must come BEFORE helmet so preflight OPTIONS returns CORS headers
+app.use(cors(corsOptions))
+
+// Explicitly handle OPTIONS preflight for all routes
+app.options('*', cors(corsOptions))
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
@@ -56,7 +86,6 @@ app.use(helmet({
     }
   }
 }))
-app.use(cors(corsOptions))
 app.use(compression({ threshold: 1024 }))
 app.use(express.json({ limit: env.jsonLimit, strict: true }))
 app.use(express.urlencoded({ extended: false, limit: env.jsonLimit }))
