@@ -83,6 +83,7 @@ app.get('/health', (req, res) => {
   res.status(databaseReady ? 200 : 503).json({
     status: databaseReady ? 'ok' : 'degraded',
     database: databaseReady ? 'connected' : 'disconnected',
+    emailConfigured: Boolean(env.emailUser && env.emailPass),
     uptimeSeconds: Math.round(process.uptime()),
     requestId: req.id,
   })
