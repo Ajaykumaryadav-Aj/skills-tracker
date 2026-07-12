@@ -28,6 +28,14 @@ export const authLimiter = rateLimit({
   handler,
 })
 
+export const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour window
+  limit: 10, // Limit each IP to 10 register requests per hour
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  handler,
+})
+
 export const changePasswordLimiter = rateLimit({
   windowMs: env.apiRateLimitWindowMs,
   limit: env.authRateLimitMax,

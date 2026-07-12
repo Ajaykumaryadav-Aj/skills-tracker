@@ -150,7 +150,7 @@ export const resendRegistrationOTP = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const email = normalizeEmail(req.body.email)
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email }).select('+password')
     if (!user) {
       await logAuditEvent(req, null, 'auth-login-failed', { email })
       throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
