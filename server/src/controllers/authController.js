@@ -71,11 +71,16 @@ export const register = async (req, res, next) => {
     const otp = existingUser
       ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
       : await createOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
-    await sendOTPEmail({ to: user.email, name: user.name, otp })
+    const mailResult = await sendOTPEmail({ to: user.email, name: user.name, otp })
+    
+    const defaultMsg = existingUser ? 'A new OTP has been sent to your email.' : 'Registration started. Please verify your email.'
+    const responseMessage = mailResult?.emailFailed
+      ? `Registration started. (Email delivery offline. Use Debug OTP: ${otp})`
+      : defaultMsg
 
     return successResponse(
       res,
-      existingUser ? 'A new OTP has been sent to your email.' : 'Registration started. Please verify your email.',
+      responseMessage,
       { email: user.email },
       201
     )
@@ -178,12 +183,17 @@ export const forgotPassword = async (req, res, next) => {
     const email = normalizeEmail(req.body.email)
     const user = await User.findOne({ email })
 
+    let mailResult = null
     if (user?.emailVerified) {
       const existingOtp = await OTP.exists({ userId: user._id, purpose: OTP_PURPOSES.FORGOT_PASSWORD })
       const otp = existingOtp
         ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.FORGOT_PASSWORD })
         : await createOTP({ userId: user._id, purpose: OTP_PURPOSES.FORGOT_PASSWORD })
-      await sendForgotPasswordEmail({ to: user.email, name: user.name, otp })
+      mailResult = await sendForgotPasswordEmail({ to: user.email, name: user.name, otp })
+      
+      if (mailResult?.emailFailed) {
+        return successResponse(res, `If the email is registered, a password reset OTP has been sent. (Email delivery offline. Use Debug OTP: ${otp})`, { email })
+      }
     }
 
     return successResponse(res, 'If the email is registered, a password reset OTP has been sent.', { email })
