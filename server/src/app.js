@@ -25,11 +25,12 @@ if (env.trustProxy) app.set('trust proxy', 1)
 
 const corsOptions = {
   origin(origin, callback) {
+    // Allow server-to-server calls and same-origin (no Origin header)
     if (!origin) return callback(null, true)
-    if (env.corsOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (env.corsOrigins.includes(origin)) {
       return callback(null, true)
     }
-    const error = new Error('Origin is not allowed')
+    const error = new Error(`CORS: origin '${origin}' is not allowed`)
     error.status = 403
     error.code = 'CORS_FORBIDDEN'
     return callback(error)
@@ -37,6 +38,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id'],
   exposedHeaders: ['RateLimit', 'RateLimit-Policy', 'X-Request-Id', 'X-Cache'],
+  credentials: false, // Using Authorization header, not cookies
   maxAge: 86400,
 }
 

@@ -2,12 +2,11 @@ import nodemailer from 'nodemailer'
 import env from '../config/env.js'
 import logger from '../config/logger.js'
 import otpEmailTemplate from '../templates/otpEmailTemplate.js'
-import httpError from '../utils/httpError.js'
 
 export const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false,
+  secure: false, // STARTTLS
   auth: {
     user: env.emailUser,
     pass: env.emailPass,
@@ -15,39 +14,47 @@ export const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
+  connectionTimeout: 10000,   // 10 s – fail fast if SMTP port is blocked
+  greetingTimeout: 8000,
+  socketTimeout: 10000,
 })
 
 const assertEmailConfigured = () => {
-  if (!env.emailUser || !env.emailPass) {
-    throw httpError(503, 'Email service is not configured', 'EMAIL_NOT_CONFIGURED')
-  }
+  if (!env.emailUser || !env.emailPass) return false
+  return true
 }
 
-const sendMail = async ({ to, subject, html }) => {
+/**
+ * Core send helper.
+ * Returns { emailFailed: true } instead of throwing so callers can surface a
+ * debug OTP to the user when SMTP is unavailable (e.g. Render port blocks).
+ */
+const sendMail = async ({ to, subject, html, debugOtp = null }) => {
+  if (!assertEmailConfigured()) {
+    logger.warn({ to, subject }, 'Email not configured – skipping send')
+    return { emailFailed: true }
+  }
+
   try {
-    assertEmailConfigured()
     const info = await transporter.sendMail({
-      from: `"Skills Tracker" <${env.emailUser}>`,
+      from: `"Skills Tracker" <${env.emailFrom || env.emailUser}>`,
       to,
       subject,
       html,
     })
-    logger.info({ messageId: info.messageId, to }, 'Email sent')
+    logger.info({ messageId: info.messageId, to }, 'Email sent successfully')
     return info
   } catch (error) {
-    logger.error({ err: error, to, subject }, 'Failed to send email via SMTP')
-    
-    // Fallback on ANY email delivery error to ensure the application remains fully functional
+    logger.error({ err: { message: error.message, code: error.code, command: error.command }, to, subject }, 'SMTP send failed')
+
+    // Log OTP for debugging (debug/staging envs or when SMTP port is blocked by hosting provider)
     logger.warn('--- EMAIL FALLBACK ACTIVE ---')
     logger.warn(`To: ${to}`)
     logger.warn(`Subject: ${subject}`)
-    
-    const otpMatch = html.match(/>(\d{6})</)
-    const otp = otpMatch ? otpMatch[1] : 'N/A'
-    
-    logger.warn(`Generated OTP: ${otp}`)
+    if (debugOtp) logger.warn(`OTP (debug): ${debugOtp}`)
     logger.warn('-----------------------------')
-    return { messageId: 'mock-message-id-' + Date.now(), emailFailed: true, otp }
+
+    return { emailFailed: true }
   }
 }
 
@@ -56,6 +63,7 @@ export const sendOTPEmail = ({ to, name, otp }) =>
     to,
     subject: 'Verify your Skills Tracker email',
     html: otpEmailTemplate({ name, otp, purpose: 'verify your email' }),
+    debugOtp: otp,
   })
 
 export const sendForgotPasswordEmail = ({ to, name, otp }) =>
@@ -63,4 +71,6 @@ export const sendForgotPasswordEmail = ({ to, name, otp }) =>
     to,
     subject: 'Reset your Skills Tracker password',
     html: otpEmailTemplate({ name, otp, purpose: 'reset your password' }),
+    debugOtp: otp,
   })
+

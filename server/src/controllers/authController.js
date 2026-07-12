@@ -72,10 +72,13 @@ export const register = async (req, res, next) => {
       ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
       : await createOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
     const mailResult = await sendOTPEmail({ to: user.email, name: user.name, otp })
-    
-    const defaultMsg = existingUser ? 'A new OTP has been sent to your email.' : 'Registration started. Please verify your email.'
+
+    // Never expose the OTP in the API response – it is logged server-side for debugging
+    const defaultMsg = existingUser
+      ? 'A new OTP has been sent to your email.'
+      : 'Registration started. Please verify your email.'
     const responseMessage = mailResult?.emailFailed
-      ? `Registration started. (Email delivery offline. Use Debug OTP: ${otp})`
+      ? `${defaultMsg} (If you did not receive an email, please check server logs or contact support.)`
       : defaultMsg
 
     return successResponse(
@@ -190,12 +193,9 @@ export const forgotPassword = async (req, res, next) => {
         ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.FORGOT_PASSWORD })
         : await createOTP({ userId: user._id, purpose: OTP_PURPOSES.FORGOT_PASSWORD })
       mailResult = await sendForgotPasswordEmail({ to: user.email, name: user.name, otp })
-      
-      if (mailResult?.emailFailed) {
-        return successResponse(res, `If the email is registered, a password reset OTP has been sent. (Email delivery offline. Use Debug OTP: ${otp})`, { email })
-      }
     }
 
+    // Always return generic message to prevent email enumeration attacks
     return successResponse(res, 'If the email is registered, a password reset OTP has been sent.', { email })
   } catch (err) {
     next(err)
