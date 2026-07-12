@@ -63,6 +63,18 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
   maxAge: '7d',
 }))
 
+app.get('/', (req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1
+  res.json({
+    success: true,
+    message: 'Welcome to the Skills Tracker API Service.',
+    status: databaseReady ? 'online' : 'degraded',
+    database: databaseReady ? 'connected' : 'disconnected',
+    documentation: '/api-docs',
+    timestamp: new Date()
+  })
+})
+
 app.get('/health', (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1
   res.status(databaseReady ? 200 : 503).json({
