@@ -204,16 +204,48 @@ const buildInterviewFallback = (payload) => {
   }
 }
 
-const persistGeneration = async ({ userId, type, prompt, response, provider, model, cacheKey }) =>
-  AIHistory.create({
+const deriveHistoryMetadata = (type, payload, response) => {
+  let title = 'AI Assistant Generation'
+  let content = ''
+  const metadata = payload || {}
+
+  if (type === 'chat') {
+    title = payload?.message ? (payload.message.slice(0, 45) + (payload.message.length > 45 ? '...' : '')) : 'AI Chat'
+    content = response?.reply || ''
+  } else if (type === 'debug') {
+    title = `Code Debug: ${payload?.language || 'JavaScript'}`
+    content = response?.explanation || ''
+  } else if (type === 'notes-generator') {
+    title = `Notes: ${payload?.topic || 'General'}`
+    content = response?.content || ''
+  } else if (type === 'interview') {
+    title = `Interview Prep: ${payload?.topic || 'General'}`
+  } else if (type === 'planner') {
+    title = `Study Plan: ${payload?.skill || 'General'}`
+  } else if (type === 'resources') {
+    title = `Resources: ${payload?.topic || 'General'}`
+  } else if (type === 'structured-roadmap') {
+    title = `Roadmap: ${payload?.goal || 'General'}`
+  }
+
+  return { title, content, metadata }
+}
+
+const persistGeneration = async ({ userId, type, prompt, response, provider, model, cacheKey, payload }) => {
+  const { title, content, metadata } = deriveHistoryMetadata(type, payload, response)
+  return AIHistory.create({
     userId,
     type,
+    title,
     prompt: String(prompt || '').slice(0, maxStoredPromptLength),
     response,
+    content,
+    metadata,
     provider,
     model,
     cacheKey,
   }).catch(() => null)
+}
 
 const meaningfulLength = (value) => String(value || '').trim().length
 
@@ -250,6 +282,7 @@ const generateStructured = async ({ userId, type, payload, prompt, schemaHint, f
     provider: result.provider,
     model: result.model,
     cacheKey,
+    payload,
   })
   const value = { data: result.output, provider: result.provider, model: result.model, fallback: result.fallback, providerError: result.error || '' }
   saveCache(cacheKey, value)
@@ -736,4 +769,18 @@ export const getAIHistory = async (userId, { type, page = 1, limit = 20 } = {}) 
     AIHistory.countDocuments(query),
   ])
   return { history: items, pagination: { page: safePage, limit: safeLimit, total, totalPages: Math.max(Math.ceil(total / safeLimit), 1) } }
+}
+
+export const getAIHistoryById = async (userId, id) => {
+  return AIHistory.findOne({ _id: id, userId }).lean()
+}
+
+export const deleteAIHistoryById = async (userId, id) => {
+  const result = await AIHistory.deleteOne({ _id: id, userId })
+  return result.deletedCount > 0
+}
+
+export const deleteAllAIHistory = async (userId) => {
+  const result = await AIHistory.deleteMany({ userId })
+  return result.deletedCount
 }

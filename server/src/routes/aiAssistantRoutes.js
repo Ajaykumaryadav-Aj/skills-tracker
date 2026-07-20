@@ -9,6 +9,9 @@ import {
   createAIResources,
   createAIStructuredRoadmap,
   getAIHistoryList,
+  getAIHistoryDetail,
+  deleteAIHistory,
+  deleteAllHistoryForUser,
   getAIRecommendations,
   getAIWeakTopics,
 } from '../controllers/aiAssistantController.js'
@@ -41,5 +44,9 @@ router.post('/interview', aiLimiter, interviewValidator, validate, createAIInter
 router.get('/weak-topics', aiReadLimiter, getAIWeakTopics)
 router.get('/recommendations', aiReadLimiter, getAIRecommendations)
 router.get('/history', aiReadLimiter, aiHistoryValidator, validate, getAIHistoryList)
+router.get('/history/:id', aiReadLimiter, getAIHistoryDetail)
+router.delete('/history', aiLimiter, deleteAllHistoryForUser)
+router.delete('/history/:id', aiLimiter, deleteAIHistory)
 
 export default router
+

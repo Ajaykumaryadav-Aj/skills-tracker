@@ -8,6 +8,9 @@ import {
   generateStructuredRoadmap,
   generateStudyPlanner,
   getAIHistory,
+  getAIHistoryById,
+  deleteAIHistoryById,
+  deleteAllAIHistory,
   suggestResources,
   summarizeNotes,
 } from '../services/aiAssistant.service.js'
@@ -138,6 +141,39 @@ export const getAIRecommendations = async (req, res, next) => {
 export const getAIHistoryList = async (req, res, next) => {
   try {
     res.json(await getAIHistory(req.user.id, req.query))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getAIHistoryDetail = async (req, res, next) => {
+  try {
+    const record = await getAIHistoryById(req.user.id, req.params.id)
+    if (!record) {
+      return res.status(404).json({ message: 'History not found or has been deleted.' })
+    }
+    res.json(record)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteAIHistory = async (req, res, next) => {
+  try {
+    const success = await deleteAIHistoryById(req.user.id, req.params.id)
+    if (!success) {
+      return res.status(404).json({ message: 'History not found or has been deleted.' })
+    }
+    res.json({ message: 'History deleted successfully.' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteAllHistoryForUser = async (req, res, next) => {
+  try {
+    const count = await deleteAllAIHistory(req.user.id)
+    res.json({ message: `All history deleted successfully. ${count} record(s) removed.`, count })
   } catch (err) {
     next(err)
   }
