@@ -35,6 +35,8 @@ const toolConfig = {
   interview: { label: 'Interview Prep', icon: Mic, description: 'Practice with technical and HR interview questions.' },
   planner: { label: 'Study Planner', icon: CalendarDays, description: 'Create daily, weekly, and monthly study plans.' },
   resources: { label: 'Resources', icon: BookOpen, description: 'Discover documentation, YouTube, and articles.' },
+  'structured-roadmap': { label: 'AI Roadmap', icon: Sparkles, description: 'AI generated structured learning path.', hideTab: true },
+  roadmap: { label: 'AI Roadmap', icon: Sparkles, description: 'AI generated structured learning path.', hideTab: true },
 }
 
 const initialForms = {
@@ -44,6 +46,16 @@ const initialForms = {
   interview: { topic: 'JavaScript Closures', type: 'Technical', difficulty: 'Beginner' },
   planner: { skill: 'TypeScript', dailyStudyHours: 2, weeklyGoal: 'Build a solid foundation and complete 3 practice tasks' },
   resources: { topic: 'Docker Containers' },
+}
+
+const safeJsonParse = (str) => {
+  if (!str) return null
+  if (typeof str === 'object') return str
+  try {
+    return JSON.parse(str)
+  } catch {
+    return null
+  }
 }
 
 // ─── SIMPLE MARKDOWN VIEWER ──────────────────────────────────────────────────
@@ -180,14 +192,16 @@ function ChatView({ messages, onSendMessage, loading }) {
 }
 
 function DebugView({ data }) {
-  if (!data) return null
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible debugging data available.</p>
+  }
   return (
     <div className="grid gap-4">
       <div className={cn('rounded-card border p-4', data.hasBug ? 'bg-red-50/55 border-red-200 text-red-900' : 'bg-emerald-50/50 border-emerald-200 text-emerald-950')}>
         <h4 className="text-sm font-black flex items-center gap-1.5">
           <Bug size={16} /> {data.hasBug ? 'Bugs Detected' : 'No Major Bugs Found'}
         </h4>
-        <p className="text-xs mt-1.5 leading-relaxed">{data.explanation}</p>
+        <p className="text-xs mt-1.5 leading-relaxed">{data.explanation || 'No explanation provided.'}</p>
       </div>
 
       {data.correctedCode && (
@@ -215,15 +229,17 @@ function DebugView({ data }) {
 }
 
 function NotesView({ data }) {
-  if (!data) return null
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible notes data available.</p>
+  }
   return (
     <div className="grid gap-4 bg-white border border-line rounded-card p-5">
       <div className="border-b border-line pb-3">
-        <h3 className="text-lg font-black text-ink">{data.title}</h3>
+        <h3 className="text-lg font-black text-ink">{data.title || 'Untitled Notes'}</h3>
       </div>
 
       <div className="prose max-w-none text-xs text-ink-soft">
-        <SimpleMarkdown text={data.content} />
+        <SimpleMarkdown text={data.content || ''} />
       </div>
 
       {data.keyTakeaways?.length > 0 && (
@@ -253,7 +269,9 @@ function NotesView({ data }) {
 function InterviewView({ data }) {
   const [revealed, setRevealed] = useState({})
 
-  if (!data) return null
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible interview data available.</p>
+  }
 
   const renderLevelGroup = (level, questions) => {
     if (!questions || questions.length === 0) return null
@@ -261,6 +279,7 @@ function InterviewView({ data }) {
       <div className="grid gap-3">
         <p className="text-xs font-black uppercase tracking-wide text-ink-muted border-b border-line pb-1.5">{level}</p>
         {questions.map((q, idx) => {
+          if (!q) return null
           const key = `${level}-${idx}`
           const isRevealed = revealed[key]
           return (
@@ -270,13 +289,13 @@ function InterviewView({ data }) {
                 onClick={() => setRevealed((prev) => ({ ...prev, [key]: !prev[key] }))}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left font-bold text-ink hover:bg-surface transition text-xs"
               >
-                <span>{q.question}</span>
+                <span>{q.question || 'Untitled Question'}</span>
                 {isRevealed ? <ChevronDown size={14} className="shrink-0 text-ink-muted" /> : <ChevronRight size={14} className="shrink-0 text-ink-muted" />}
               </button>
               {isRevealed && (
                 <div className="border-t border-line bg-surface/50 p-4 text-xs text-ink-soft leading-relaxed whitespace-pre-wrap">
                   <strong className="block text-emerald-dark-brand mb-1">Answer:</strong>
-                  {q.answer}
+                  {q.answer || 'No answer provided.'}
                 </div>
               )}
             </div>
@@ -298,19 +317,24 @@ function InterviewView({ data }) {
 }
 
 function PlannerView({ data }) {
-  if (!data) return null
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible planner data available.</p>
+  }
   return (
     <div className="grid gap-4">
       {data.dailySchedule?.length > 0 && (
         <div className="rounded-card border border-line bg-white p-4">
           <p className="text-xs font-extrabold uppercase tracking-wide text-ink-muted mb-3">Daily Study Routine</p>
           <div className="grid gap-3">
-            {data.dailySchedule.map((block, i) => (
-              <div key={i} className="flex gap-3 border-l-2 border-emerald-brand pl-3 py-1">
-                <span className="shrink-0 text-xs font-black text-emerald-dark-brand bg-emerald-pale rounded px-2 py-0.5">{block.block} • {block.duration}</span>
-                <p className="text-xs text-ink-soft leading-relaxed">{block.activity}</p>
-              </div>
-            ))}
+            {data.dailySchedule.map((block, i) => {
+              if (!block) return null
+              return (
+                <div key={i} className="flex gap-3 border-l-2 border-emerald-brand pl-3 py-1">
+                  <span className="shrink-0 text-xs font-black text-emerald-dark-brand bg-emerald-pale rounded px-2 py-0.5">{block.block || 'Routine'} • {block.duration || 'N/A'}</span>
+                  <p className="text-xs text-ink-soft leading-relaxed">{block.activity || ''}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -347,7 +371,9 @@ function PlannerView({ data }) {
 }
 
 function ResourcesView({ data }) {
-  if (!data) return null
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible resources data available.</p>
+  }
 
   const renderSection = (title, items) => {
     if (!items || items.length === 0) return null
@@ -355,22 +381,25 @@ function ResourcesView({ data }) {
       <div className="grid gap-2.5">
         <p className="text-xs font-extrabold text-ink-muted uppercase tracking-wider">{title}</p>
         <div className="grid gap-2">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex items-start gap-3 rounded-card border border-line bg-white p-3">
-              <span className="text-base shrink-0">🔗</span>
-              <div className="min-w-0 flex-1">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-bold text-blue-brand hover:underline"
-                >
-                  {item.title} <ExternalLink size={10} />
-                </a>
-                {item.description && <p className="mt-1 text-xs text-ink-soft leading-relaxed">{item.description}</p>}
+          {items.map((item, idx) => {
+            if (!item) return null
+            return (
+              <div key={idx} className="flex items-start gap-3 rounded-card border border-line bg-white p-3">
+                <span className="text-base shrink-0">🔗</span>
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={item.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-bold text-blue-brand hover:underline"
+                  >
+                    {item.title || 'Resource Link'} <ExternalLink size={10} />
+                  </a>
+                  {item.description && <p className="mt-1 text-xs text-ink-soft leading-relaxed">{item.description}</p>}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     )
@@ -387,6 +416,149 @@ function ResourcesView({ data }) {
   )
 }
 
+function RoadmapView({ data }) {
+  if (!data || typeof data !== 'object') {
+    return <p className="text-xs text-ink-muted italic">No compatible roadmap data available.</p>
+  }
+
+  const oldRoadmap = Array.isArray(data.roadmap) ? data.roadmap : null
+  const milestones = Array.isArray(data.milestones) ? data.milestones : []
+  const weeklyStudyPlan = Array.isArray(data.weeklyStudyPlan) ? data.weeklyStudyPlan : []
+  const skills = Array.isArray(data.skills) ? data.skills : []
+
+  return (
+    <div className="grid gap-5">
+      {(data.title || data.goal) && (
+        <div className="rounded-card border border-line bg-white p-5">
+          <h3 className="text-lg font-black text-ink">{data.title || `Roadmap: ${data.goal}`}</h3>
+          {data.description && <p className="mt-2 text-xs text-ink-soft leading-relaxed">{data.description}</p>}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {data.estimatedCompletionTime && (
+              <p className="text-[10px] font-extrabold text-emerald-dark-brand bg-emerald-pale rounded px-2.5 py-0.5">
+                Duration: {data.estimatedCompletionTime}
+              </p>
+            )}
+            {data.estimatedHours && (
+              <p className="text-[10px] font-extrabold text-purple-700 bg-purple-50 rounded px-2.5 py-0.5">
+                Hours: {data.estimatedHours}h
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {skills.length > 0 && (
+        <div className="rounded-card border border-line bg-white p-5 grid gap-4">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-ink-muted border-b border-line pb-2">Learning Phases & Modules</p>
+          <div className="grid gap-4">
+            {skills.map((skill, index) => {
+              if (!skill) return null
+              return (
+                <div key={index} className="rounded-card border border-line bg-surface p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-2">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-emerald-dark-brand bg-emerald-pale rounded px-2 py-0.5 mr-2">
+                        {skill.phase || 'Phase'}
+                      </span>
+                      <strong className="text-xs font-black text-ink">{skill.module || 'Module'}</strong>
+                    </div>
+                    {skill.estimatedHours && <span className="text-[11px] font-bold text-ink-muted">{skill.estimatedHours} hrs</span>}
+                  </div>
+                  {skill.topic && <p className="text-xs font-bold text-ink mt-2">Topic: {skill.topic}</p>}
+                  {skill.subtopics?.length > 0 && (
+                    <p className="text-[11px] text-ink-soft mt-1">
+                      <strong>Subtopics:</strong> {skill.subtopics.join(', ')}
+                    </p>
+                  )}
+                  {skill.prerequisites?.length > 0 && (
+                    <p className="text-[11px] text-ink-muted mt-1">
+                      <strong>Prerequisites:</strong> {skill.prerequisites.join(', ')}
+                    </p>
+                  )}
+                  {skill.miniProject?.title && (
+                    <div className="mt-3 bg-purple-50/40 border border-purple-100 rounded-card p-3">
+                      <p className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wide">🛠 Mini Project</p>
+                      <p className="text-xs font-bold text-ink mt-1">{skill.miniProject.title}</p>
+                      <p className="text-[11px] text-ink-soft mt-0.5">{skill.miniProject.description}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {oldRoadmap && (
+        <div className="rounded-card border border-line bg-white p-5 grid gap-3">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-ink-muted border-b border-line pb-2">Weekly Roadmap</p>
+          <div className="grid gap-3">
+            {oldRoadmap.map((item, index) => {
+              if (!item) return null
+              return (
+                <div key={index} className="border-l-2 border-emerald-brand pl-3 py-1">
+                  <strong className="text-xs font-black text-ink">{item.title || `Week ${item.week}`}</strong>
+                  {item.focus && <p className="text-xs text-ink-soft mt-0.5">Focus: {item.focus}</p>}
+                  {item.tasks?.length > 0 && (
+                    <ul className="mt-1.5 grid gap-1 list-disc pl-4 text-[11px] text-ink-soft">
+                      {item.tasks.map((t, tidx) => (
+                        <li key={tidx}>{t}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {milestones.length > 0 && (
+        <div className="rounded-card border border-line bg-white p-5 grid gap-2">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-ink-muted border-b border-line pb-2">Path Milestones</p>
+          <div className="grid gap-2">
+            {milestones.map((m, index) => {
+              if (!m) return null
+              return (
+                <div key={index} className="flex items-start gap-2.5 p-2 rounded bg-surface text-xs">
+                  <span className="text-emerald-brand font-black">✓</span>
+                  <div>
+                    <p className="font-bold text-ink">{m.title || (m.phase + ' Milestone')}</p>
+                    {m.description && <p className="text-ink-soft mt-0.5">{m.description}</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {weeklyStudyPlan.length > 0 && (
+        <div className="rounded-card border border-line bg-white p-5 grid gap-2">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-ink-muted border-b border-line pb-2">Weekly Study Plan</p>
+          <div className="grid gap-2">
+            {weeklyStudyPlan.map((w, index) => {
+              if (!w) return null
+              return (
+                <div key={index} className="p-3 border border-line rounded bg-surface">
+                  <p className="text-xs font-bold text-ink">Week {w.week}: {w.title}</p>
+                  {w.tasks?.length > 0 && (
+                    <ul className="mt-1.5 grid gap-1 list-disc pl-4 text-[11px] text-ink-soft">
+                      {w.tasks.map((t, tidx) => (
+                        <li key={tidx}>{t}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ───────────────────────────────────────────────────────────────
 
 export default function AIAssistant() {
@@ -396,7 +568,9 @@ export default function AIAssistant() {
   const [chatMessages, setChatMessages] = useState([])
   const [history, setHistory] = useState([])
   const [historyPage, setHistoryPage] = useState(1)
-  const [historyPagination, setHistoryPagination] = useState({ page: 1, limit: 5, total: 0, totalPages: 1 })
+  const [historyPagination, setHistoryPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 })
+  // 'idle' | 'loading' | 'loaded' | 'error'
+  const [historyStatus, setHistoryStatus] = useState('idle')
   const [loading, setLoading] = useState('')
   const [toast, setToast] = useState({ type: 'success', message: '' })
   const [lastGeneratedAt, setLastGeneratedAt] = useState(0)
@@ -406,17 +580,21 @@ export default function AIAssistant() {
   const [historySearch, setHistorySearch] = useState('')
   const historyButtonRef = useRef(null)
 
+  // Confirmation dialog state
+  // { open, type: 'one'|'all', id?, onConfirm }
+  const [confirmDialog, setConfirmDialog] = useState({ open: false })
+
   const activeForm = forms[activeTool]
 
-  const loadHistory = useCallback(async (page) => {
+  const loadHistory = useCallback(async (page = 1, silent = false) => {
+    if (!silent) setHistoryStatus('loading')
     try {
-      const res = await aiService.getHistory({ page, limit: 5 })
+      const res = await aiService.getHistory({ page, limit: 20 })
       setHistory(res.data.history || [])
-      if (res.data.pagination) {
-        setHistoryPagination(res.data.pagination)
-      }
+      if (res.data.pagination) setHistoryPagination(res.data.pagination)
+      setHistoryStatus('loaded')
     } catch {
-      // silent fail
+      if (!silent) setHistoryStatus('error')
     }
   }, [])
 
@@ -500,10 +678,91 @@ export default function AIAssistant() {
     }
   }, [forms.chat.message])
 
-  // Local deletion helper
+  // Database-backed deletion helper — shows confirmation first
   const handleDeleteHistory = (id) => {
-    setHistory((prev) => prev.filter((item) => item._id !== id))
-    setToast({ type: 'success', message: 'History entry deleted.' })
+    setConfirmDialog({
+      open: true,
+      type: 'one',
+      id,
+      onConfirm: async () => {
+        setConfirmDialog({ open: false })
+        try {
+          await aiService.deleteHistoryItem(id)
+          setHistory((prev) => prev.filter((item) => item._id !== id))
+          if (result?.historyId === id) setResult(null)
+          setToast({ type: 'success', message: 'History entry deleted.' })
+          // Silently refresh to keep count accurate
+          loadHistory(historyPage, true)
+        } catch {
+          setToast({ type: 'danger', message: 'Failed to delete history item.' })
+        }
+      },
+    })
+  }
+
+  const handleDeleteAllHistory = () => {
+    setConfirmDialog({
+      open: true,
+      type: 'all',
+      onConfirm: async () => {
+        setConfirmDialog({ open: false })
+        try {
+          await aiService.deleteAllHistory()
+          setHistory([])
+          setHistoryPagination({ page: 1, limit: 20, total: 0, totalPages: 1 })
+          setResult(null)
+          setToast({ type: 'success', message: 'All history deleted.' })
+        } catch {
+          setToast({ type: 'danger', message: 'Failed to delete all history.' })
+        }
+      },
+    })
+  }
+
+  const handleHistoryItemClick = async (item) => {
+    if (!item?._id) return
+
+    closeDrawer()
+    setResult(null)
+    setLoading('history')
+    setToast({ type: 'success', message: '' })
+
+    try {
+      const res = await aiService.getHistoryItem(item._id)
+      const record = res.data
+
+      if (!record) {
+        setResult({ isNotFound: true, historyId: item._id })
+        return
+      }
+
+      // Keep the raw DB type so renderToolOutput can match it correctly.
+      // Compute a tab key separately (notes-generator/notes-summary → notes tab).
+      const rawType = record.type
+      const tabKey = rawType === 'notes-generator' || rawType === 'notes-summary' ? 'notes' : rawType
+      const isTabSupported = tabKey in toolConfig
+      const parsedResponse = safeJsonParse(record.response)
+
+      if (parsedResponse) {
+        if (isTabSupported) setActiveTool(tabKey)
+        setResult({ type: rawType, tabKey, data: parsedResponse, historyId: item._id })
+      } else {
+        setResult({ type: rawType, tabKey, isBroken: true, historyId: item._id })
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setResult({ isNotFound: true, historyId: item._id })
+      } else {
+        setResult({
+          isError: true,
+          errorMsg: friendlyError(err, 'Failed to load history'),
+          historyId: item._id,
+          rawItem: item
+        })
+      }
+    } finally {
+      setLoading('')
+    }
   }
 
   const filteredHistory = useMemo(() => {
@@ -541,19 +800,112 @@ export default function AIAssistant() {
   }, [activeTool])
 
   const renderToolOutput = () => {
-    if (!result) {
-      return <p className="rounded-card border border-dashed border-line-strong bg-white p-6 text-center text-sm text-ink-soft">Choose a tool and generate your first AI response.</p>
-    }
-    const type = result.type
-    const data = result.data
+    try {
+      if (loading === 'history') {
+        return (
+          <div className="space-y-4 p-5 bg-white border border-line rounded-card animate-pulse">
+            <div className="h-5 bg-zinc-200 rounded w-1/4" />
+            <div className="h-3.5 bg-zinc-200 rounded w-full" />
+            <div className="h-3.5 bg-zinc-200 rounded w-5/6" />
+            <div className="h-3.5 bg-zinc-200 rounded w-3/4" />
+            <div className="h-3.5 bg-zinc-200 rounded w-4/5" />
+          </div>
+        )
+      }
 
-    if (type === 'chat') return <div className="p-3 bg-white rounded-card border border-line whitespace-pre-wrap text-sm"><SimpleMarkdown text={typeof data === 'string' ? data : data.reply} /></div>
-    if (type === 'debug') return <DebugView data={data} />
-    if (type === 'notes-generator') return <NotesView data={data} />
-    if (type === 'interview') return <InterviewView data={data} />
-    if (type === 'planner') return <PlannerView data={data} />
-    if (type === 'resources') return <ResourcesView data={data} />
-    return renderValue(data)
+      if (!result) {
+        return <p className="rounded-card border border-dashed border-line-strong bg-white p-6 text-center text-sm text-ink-soft">Choose a tool and generate your first AI response.</p>
+      }
+
+      if (result.isNotFound) {
+        return (
+          <div className="text-center p-6 bg-white border border-dashed border-red-200 rounded-card">
+            <p className="text-sm font-bold text-red-600">History not found or has been deleted.</p>
+            <p className="text-xs text-ink-soft mt-1">This generation is no longer available in the database.</p>
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className={cn(ui.button.base, ui.button.secondary, 'mt-4')}
+            >
+              Clear Preview
+            </button>
+          </div>
+        )
+      }
+
+      if (result.isError) {
+        return (
+          <div className="text-center p-6 bg-white border border-dashed border-red-200 rounded-card">
+            <p className="text-sm font-bold text-red-600">Unable to load this generation.</p>
+            <p className="text-xs text-ink-soft mt-1">{result.errorMsg || 'An error occurred.'}</p>
+            <div className="flex gap-2 justify-center mt-4">
+              <button
+                type="button"
+                onClick={() => setResult(null)}
+                className={cn(ui.button.base, ui.button.secondary)}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => handleHistoryItemClick(result.rawItem || { _id: result.historyId })}
+                className={cn(ui.button.base, ui.button.primary, 'bg-emerald-brand text-white border-emerald-brand hover:bg-emerald-dark-brand')}
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      if (result.isBroken) {
+        return (
+          <div className="text-center p-6 bg-white border border-dashed border-red-200 rounded-card">
+            <p className="text-sm font-bold text-red-600">This generation is no longer available.</p>
+            <p className="text-xs text-ink-soft mt-1">The data format or history record is not compatible with this MVP workspace.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setResult(null)
+                setActiveTool('chat')
+              }}
+              className={cn(ui.button.base, ui.button.primary, 'mt-4 bg-emerald-brand text-white border-emerald-brand hover:bg-emerald-dark-brand')}
+            >
+              Generate Again
+            </button>
+          </div>
+        )
+      }
+
+      const type = result.type
+      const data = result.data
+
+      if (type === 'chat') {
+        const text = typeof data === 'string' ? data : (data?.reply || data?.text || 'No response reply found.')
+        return <div className="p-3 bg-white rounded-card border border-line whitespace-pre-wrap text-sm"><SimpleMarkdown text={text} /></div>
+      }
+      if (type === 'debug') return <DebugView data={data} />
+      if (type === 'notes-generator' || type === 'notes' || type === 'notes-summary') return <NotesView data={data} />
+      if (type === 'interview') return <InterviewView data={data} />
+      if (type === 'planner') return <PlannerView data={data} />
+      if (type === 'resources') return <ResourcesView data={data} />
+      if (type === 'structured-roadmap' || type === 'roadmap') return <RoadmapView data={data} />
+      return renderValue(data)
+    } catch (e) {
+      return (
+        <div className="text-center p-6 bg-white border border-dashed border-red-200 rounded-card">
+          <p className="text-sm font-bold text-red-600">Unable to load this generation.</p>
+          <p className="text-xs text-ink-soft mt-1">An error occurred while parsing the history record.</p>
+          <button
+            type="button"
+            onClick={() => setResult(null)}
+            className={cn(ui.button.base, ui.button.secondary, 'mt-4')}
+          >
+            Clear preview
+          </button>
+        </div>
+      )
+    }
   }
 
   const closeDrawer = () => {
@@ -578,7 +930,7 @@ export default function AIAssistant() {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface-raised px-5 py-4 sm:px-6">
             <div>
               <p className="text-xs font-extrabold uppercase text-emerald-dark-brand">WORKSPACE</p>
-              <h2 className="mt-1 text-xl font-black text-ink">{toolConfig[activeTool].label}</h2>
+              <h2 className="mt-1 text-xl font-black text-ink">{(toolConfig[activeTool] || toolConfig.chat).label}</h2>
             </div>
             
             {/* Header Right Actions */}
@@ -601,7 +953,7 @@ export default function AIAssistant() {
           <div className="grid gap-5 p-5 sm:p-6">
             {/* Tabs */}
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" role="tablist" aria-label="AI tools">
-              {Object.entries(toolConfig).map(([key, item]) => {
+              {Object.entries(toolConfig).filter(([_, item]) => !item.hideTab).map(([key, item]) => {
                 const Icon = item.icon
                 return (
                   <button
@@ -626,7 +978,7 @@ export default function AIAssistant() {
 
             {/* Description banner */}
             <div className="rounded-card border border-line bg-surface/40 p-3 text-xs text-ink-soft">
-              {toolConfig[activeTool].description}
+              {(toolConfig[activeTool] || toolConfig.chat).description}
             </div>
 
             {/* Form rendering */}
@@ -715,14 +1067,17 @@ export default function AIAssistant() {
               </form>
             )}
 
-            {/* Response output */}
-            {activeTool !== 'chat' && (
+            {/* Response output — always shown when a non-chat history record is loaded,
+                and always shown for non-chat tools */}
+            {(activeTool !== 'chat' || (result && result.type)) && (
               <div className="grid gap-4 rounded-card border border-line bg-surface-raised p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-extrabold uppercase text-emerald-dark-brand">ASSISTANT OUTPUT</p>
                     <h2 className="mt-1 text-xl font-black text-ink">
-                      {result ? toolConfig[result.type === 'notes-generator' ? 'notes' : result.type]?.label : 'Ready'}
+                      {result
+                        ? toolConfig[result.tabKey || (result.type === 'notes-generator' || result.type === 'notes-summary' ? 'notes' : result.type)]?.label || result.type
+                        : 'Ready'}
                     </h2>
                   </div>
                   <Brain size={20} className="shrink-0 text-emerald-dark-brand" />
@@ -734,6 +1089,39 @@ export default function AIAssistant() {
         </section>
       </div>
 
+      {/* ── CONFIRMATION DIALOG ── */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setConfirmDialog({ open: false })} />
+          <div className="relative z-10 w-full max-w-sm rounded-card border border-line bg-white p-6 shadow-2xl mx-4">
+            <h3 className="text-base font-black text-ink">
+              {confirmDialog.type === 'all' ? 'Delete All History?' : 'Delete This Entry?'}
+            </h3>
+            <p className="mt-2 text-xs text-ink-soft leading-relaxed">
+              {confirmDialog.type === 'all'
+                ? 'This will permanently delete all your AI generation history. This action cannot be undone.'
+                : 'This will permanently delete this history entry. This action cannot be undone.'}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog({ open: false })}
+                className={cn(ui.button.base, ui.button.secondary, 'bg-white')}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={cn(ui.button.base, 'bg-red-600 text-white border-red-700 hover:bg-red-700 font-bold px-4')}
+              >
+                {confirmDialog.type === 'all' ? 'Delete All' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── RIGHT-SIDE SLIDE HISTORY DRAWER ── */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
@@ -744,30 +1132,47 @@ export default function AIAssistant() {
           />
 
           <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-            <div className="pointer-events-auto w-screen max-w-md bg-white shadow-2xl flex flex-col h-full border-l border-line transform transition duration-300 translate-x-0">
+            <div className="pointer-events-auto w-screen max-w-md bg-white shadow-2xl flex flex-col h-full border-l border-line">
               {/* Drawer Header */}
-              <div className="border-b border-line px-5 py-4 flex items-center justify-between">
+              <div className="border-b border-line px-5 py-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                   <History size={18} className="text-emerald-brand" />
                   <h3 className="text-base font-black text-ink">Generation History</h3>
+                  {history.length > 0 && (
+                    <span className="ml-1 rounded-full bg-emerald-pale px-2 py-0.5 text-[10px] font-black text-emerald-dark-brand">
+                      {historyPagination.total || history.length}
+                    </span>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={closeDrawer}
-                  className="rounded-full p-1.5 text-ink-muted hover:bg-surface hover:text-ink transition"
-                  aria-label="Close history drawer"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {history.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteAllHistory}
+                      className="flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold text-red-500 hover:bg-red-50 hover:text-red-700 transition"
+                      title="Delete all history"
+                    >
+                      <Trash2 size={12} /> Delete All
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={closeDrawer}
+                    className="rounded-full p-1.5 text-ink-muted hover:bg-surface hover:text-ink transition"
+                    aria-label="Close history drawer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Search filter */}
-              <div className="px-5 pt-4 pb-2">
+              <div className="px-5 pt-4 pb-2 shrink-0">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                   <input
                     type="text"
-                    placeholder="Search history by type..."
+                    placeholder="Search by type or topic..."
                     className={cn(ui.field.input, 'pl-9 text-xs py-2 min-h-8')}
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
@@ -776,61 +1181,133 @@ export default function AIAssistant() {
               </div>
 
               {/* Scrollable history items list */}
-              <div className="flex-1 overflow-y-auto px-5 py-2 space-y-3">
-                {filteredHistory.length === 0 ? (
-                  <p className="text-center text-xs text-ink-soft py-10">No matching generations found.</p>
-                ) : (
-                  filteredHistory.map((item) => {
-                    const matchedType = item.type === 'notes-generator' ? 'notes' : item.type === 'notes-summary' ? 'notes' : item.type
-                    return (
-                      <div
-                        key={item._id}
-                        className="group flex items-start justify-between gap-3 rounded-card border border-line bg-white p-3 hover:border-emerald-brand hover:bg-emerald-pale/10 transition text-left"
-                      >
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left"
-                          onClick={() => {
-                            setActiveTool(matchedType)
-                            setResult({ type: matchedType, data: item.response })
-                            closeDrawer()
-                          }}
-                        >
-                          <strong className="block text-xs font-black capitalize text-ink flex items-center gap-1.5">
-                            {item.type}
-                          </strong>
-                          {item.prompt && (
-                            <p className="mt-1 text-[11px] text-ink-soft truncate leading-normal" title={item.prompt}>
-                              {item.prompt}
-                            </p>
-                          )}
-                          <span className="mt-1 block text-[10px] text-ink-muted">
-                            {new Date(item.createdAt).toLocaleString()}
-                          </span>
-                        </button>
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteHistory(item._id)}
-                          className="shrink-0 p-1 rounded hover:bg-red-50 text-ink-muted hover:text-red-600 transition md:opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Delete entry"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+              <div className="flex-1 overflow-y-auto px-5 py-2">
+                {/* Loading state */}
+                {historyStatus === 'loading' && (
+                  <div className="space-y-3 pt-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="animate-pulse rounded-card border border-line bg-white p-3">
+                        <div className="h-3.5 bg-zinc-200 rounded w-2/3 mb-2" />
+                        <div className="h-2.5 bg-zinc-100 rounded w-full mb-1" />
+                        <div className="h-2 bg-zinc-100 rounded w-1/3" />
                       </div>
-                    )
-                  })
+                    ))}
+                  </div>
+                )}
+
+                {/* Error state */}
+                {historyStatus === 'error' && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-sm font-bold text-red-600">Failed to load history</p>
+                    <p className="mt-1 text-xs text-ink-soft">Check your connection and try again.</p>
+                    <button
+                      type="button"
+                      onClick={() => loadHistory(historyPage)}
+                      className={cn(ui.button.base, ui.button.secondary, 'mt-4 bg-white text-xs')}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {/* Loaded: empty state */}
+                {(historyStatus === 'loaded' || historyStatus === 'idle') && filteredHistory.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <History size={28} className="text-ink-muted mb-3 opacity-40" />
+                    {historySearch.trim() ? (
+                      <>
+                        <p className="text-sm font-bold text-ink">No results found</p>
+                        <p className="mt-1 text-xs text-ink-soft">Try a different search term.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold text-ink">No history yet</p>
+                        <p className="mt-1 text-xs text-ink-soft">Generate AI content and it will appear here.</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Loaded: history list */}
+                {filteredHistory.length > 0 && (
+                  <div className="space-y-2 py-1">
+                    {filteredHistory.map((item) => {
+                      const typeLabel = {
+                        'chat': 'AI Chat',
+                        'debug': 'Code Debug',
+                        'notes-generator': 'Notes',
+                        'notes-summary': 'Notes Summary',
+                        'interview': 'Interview Prep',
+                        'planner': 'Study Planner',
+                        'resources': 'Resources',
+                        'structured-roadmap': 'Roadmap',
+                        'roadmap': 'Roadmap',
+                        'weak-topics': 'Weak Topics',
+                        'recommendations': 'Recommendations',
+                      }[item.type] || item.type
+
+                      const isActive = result?.historyId === item._id
+
+                      return (
+                        <div
+                          key={item._id}
+                          className={cn(
+                            'group flex items-start justify-between gap-3 rounded-card border p-3 transition text-left',
+                            isActive
+                              ? 'border-emerald-brand bg-emerald-pale/20'
+                              : 'border-line bg-white hover:border-emerald-brand/50 hover:bg-emerald-pale/10'
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() => handleHistoryItemClick(item)}
+                          >
+                            {/* Type badge */}
+                            <span className="inline-block rounded bg-emerald-pale px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-dark-brand mb-1">
+                              {typeLabel}
+                            </span>
+                            {/* Title */}
+                            <p className="text-xs font-bold text-ink leading-snug line-clamp-2">
+                              {item.title || item.prompt || typeLabel}
+                            </p>
+                            {/* Prompt preview */}
+                            {item.prompt && item.title && item.prompt !== item.title && (
+                              <p className="mt-0.5 text-[11px] text-ink-soft truncate leading-normal" title={item.prompt}>
+                                {item.prompt}
+                              </p>
+                            )}
+                            {/* Timestamp */}
+                            <span className="mt-1 block text-[10px] text-ink-muted">
+                              {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {' · '}
+                              {new Date(item.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHistory(item._id)}
+                            className="shrink-0 mt-0.5 p-1 rounded hover:bg-red-50 text-ink-muted hover:text-red-600 transition opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            title="Delete entry"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
 
               {/* Pagination Drawer Footer */}
               {history.length > 0 && historyPagination.totalPages > 1 && (
-                <div className="border-t border-line px-5 py-4 bg-surface-raised flex items-center justify-between text-xs text-ink-soft">
+                <div className="border-t border-line px-5 py-3 bg-surface-raised flex items-center justify-between text-xs text-ink-soft shrink-0">
                   <button
                     type="button"
                     disabled={historyPage <= 1}
                     onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                    className={cn(ui.button.base, ui.button.secondary, 'min-h-8 px-2 py-1 bg-white')}
+                    className={cn(ui.button.base, ui.button.secondary, 'min-h-8 px-2 py-1 bg-white disabled:opacity-40')}
                   >
                     Prev
                   </button>
@@ -839,7 +1316,7 @@ export default function AIAssistant() {
                     type="button"
                     disabled={historyPage >= historyPagination.totalPages}
                     onClick={() => setHistoryPage((p) => Math.min(historyPagination.totalPages, p + 1))}
-                    className={cn(ui.button.base, ui.button.secondary, 'min-h-8 px-2 py-1 bg-white')}
+                    className={cn(ui.button.base, ui.button.secondary, 'min-h-8 px-2 py-1 bg-white disabled:opacity-40')}
                   >
                     Next
                   </button>

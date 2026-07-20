@@ -11,4 +11,8 @@ export const generateInterview = (payload) => api.post('/ai/interview', payload,
 export const getWeakTopics = () => api.get('/ai/weak-topics', aiRequest)
 export const getRecommendations = () => api.get('/ai/recommendations', aiRequest)
 export const getHistory = (params) => api.get('/ai/history', { params })
+export const getHistoryItem = (id) => api.get(`/ai/history/${id}`)
+export const deleteHistoryItem = (id) => api.delete(`/ai/history/${id}`)
+export const deleteAllHistory = () => api.delete('/ai/history')
 export const summarizeNotes = (payload) => api.post('/ai/notes-summary', payload, aiRequest)
+
