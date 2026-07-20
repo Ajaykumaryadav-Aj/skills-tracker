@@ -70,7 +70,7 @@ const env = Object.freeze({
   jsonLimit: process.env.JSON_BODY_LIMIT || '100kb',
   apiRateLimitWindowMs: toInteger(process.env.API_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
   apiRateLimitMax: toInteger(process.env.API_RATE_LIMIT_MAX, 300),
-  authRateLimitMax: toInteger(process.env.AUTH_RATE_LIMIT_MAX, 10),
+  authRateLimitMax: toInteger(process.env.AUTH_RATE_LIMIT_MAX, 100),
   cacheEnabled: toBoolean(process.env.API_CACHE_ENABLED, true),
   cacheTtlSeconds: toInteger(process.env.API_CACHE_TTL_SECONDS, 30),
   cacheMaxEntries: toInteger(process.env.API_CACHE_MAX_ENTRIES, 500),

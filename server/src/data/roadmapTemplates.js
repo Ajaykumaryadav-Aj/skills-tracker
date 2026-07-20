@@ -20,43 +20,21 @@ export const roadmapTemplates = [
             title: 'HTML5 Semantics',
             description: 'Learn semantic HTML5 elements and their proper usage',
             subtopics: [
-              {
-                title: 'Semantic Elements',
-                description: 'article, section, nav, header, footer, etc.',
-              },
-              {
-                title: 'Forms & Validation',
-                description: 'HTML5 form elements and native validation',
-              },
-              {
-                title: 'Accessibility (a11y)',
-                description: 'ARIA roles and semantic HTML for accessibility',
-              },
-            ],
+              { title: 'Semantic Elements', description: 'article, section, nav, header, footer, etc.' },
+              { title: 'Forms & Validation', description: 'HTML5 form elements and native validation' },
+              { title: 'Accessibility (a11y)', description: 'ARIA roles and semantic HTML for accessibility' }
+            ]
           },
           {
             title: 'CSS3 Fundamentals',
             description: 'Core CSS3 techniques and best practices',
             subtopics: [
-              {
-                title: 'Flexbox Layout',
-                description: 'Master flexible box layout module',
-              },
-              {
-                title: 'Grid Layout',
-                description: 'Learn CSS Grid for complex layouts',
-              },
-              {
-                title: 'Animations & Transitions',
-                description: 'Create smooth animations and transitions',
-              },
-              {
-                title: 'Responsive Design',
-                description: 'Mobile-first and media queries',
-              },
-            ],
-          },
-        ],
+              { title: 'Flexbox Layout', description: 'Master flexible box layout module' },
+              { title: 'Grid Layout', description: 'Learn CSS Grid for complex layouts' },
+              { title: 'Responsive Design', description: 'Mobile-first and media queries' }
+            ]
+          }
+        ]
       },
       {
         title: 'JavaScript Fundamentals',
@@ -68,792 +46,514 @@ export const roadmapTemplates = [
             title: 'Core JavaScript',
             description: 'Variables, functions, scope, closures, prototypes',
             subtopics: [
-              {
-                title: 'Variables & Types',
-                description: 'let, const, var, and JavaScript data types',
-              },
-              {
-                title: 'Functions & Scope',
-                description: 'Function declarations, arrow functions, closures',
-              },
-              {
-                title: 'Async JavaScript',
-                description: 'Promises, async/await, callbacks',
-              },
-            ],
+              { title: 'Variables & Types', description: 'let, const, var, and JavaScript data types' },
+              { title: 'Functions & Scope', description: 'Function declarations, arrow functions, closures' },
+              { title: 'Async JavaScript', description: 'Promises, async/await, callbacks' }
+            ]
           },
           {
             title: 'DOM Manipulation',
             description: 'Interact with HTML and CSS from JavaScript',
             subtopics: [
-              {
-                title: 'DOM Selection',
-                description: 'querySelector, getElementById, etc.',
-              },
-              {
-                title: 'Event Handling',
-                description: 'Event listeners and event delegation',
-              },
-              {
-                title: 'DOM Updates',
-                description: 'Modify HTML and CSS dynamically',
-              },
-            ],
-          },
-          {
-            title: 'Modern JavaScript (ES6+)',
-            description: 'Learn modern JavaScript features',
-            subtopics: [
-              {
-                title: 'Arrow Functions & Classes',
-                description: 'Modern function and class syntax',
-              },
-              {
-                title: 'Destructuring & Spread',
-                description: 'Destructuring assignment and spread operator',
-              },
-              {
-                title: 'Modules',
-                description: 'import/export and module system',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'React Fundamentals',
-        description: 'Build interactive UIs with React',
-        level: 'Intermediate',
-        estimatedHours: 60,
-        topics: [
-          {
-            title: 'React Basics',
-            description: 'Components, JSX, props, and state',
-            subtopics: [
-              {
-                title: 'Components',
-                description: 'Functional and class components',
-              },
-              {
-                title: 'JSX',
-                description: 'Write HTML-like code in JavaScript',
-              },
-              {
-                title: 'Props & State',
-                description: 'Pass data and manage component state',
-              },
-            ],
-          },
-          {
-            title: 'React Hooks',
-            description: 'Use hooks for state and side effects',
-            subtopics: [
-              {
-                title: 'useState & useEffect',
-                description: 'State and lifecycle hooks',
-              },
-              {
-                title: 'Custom Hooks',
-                description: 'Create reusable hook logic',
-              },
-              {
-                title: 'Context API',
-                description: 'Global state management with Context',
-              },
-            ],
-          },
-          {
-            title: 'Routing & Forms',
-            description: 'Navigation and form handling',
-            subtopics: [
-              {
-                title: 'React Router',
-                description: 'Client-side routing with React Router',
-              },
-              {
-                title: 'Form Handling',
-                description: 'Controlled components and form validation',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Build Tools & Deployment',
-        description: 'Webpack, Vite, and deployment strategies',
-        level: 'Intermediate',
-        estimatedHours: 30,
-        topics: [
-          {
-            title: 'Module Bundlers',
-            description: 'Webpack, Vite, and other bundlers',
-            subtopics: [
-              {
-                title: 'Vite Setup',
-                description: 'Fast build tool for modern projects',
-              },
-              {
-                title: 'Webpack Basics',
-                description: 'Module bundling and loaders',
-              },
-            ],
-          },
-          {
-            title: 'Deployment',
-            description: 'Deploy applications to production',
-            subtopics: [
-              {
-                title: 'Vercel & Netlify',
-                description: 'Deploy to Vercel or Netlify',
-              },
-              {
-                title: 'Performance Optimization',
-                description: 'Code splitting and lazy loading',
-              },
-            ],
-          },
-        ],
-      },
-    ],
+              { title: 'Event Handling', description: 'Event listeners and event delegation' },
+              { title: 'DOM Updates', description: 'Modify HTML and CSS dynamically' }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     name: 'Backend Developer',
     title: 'Backend Developer Roadmap',
-    description: 'Complete roadmap to become a professional backend developer with server-side technologies.',
+    description: 'Master backend technologies, servers, databases, and APIs.',
     icon: '⚙️',
     category: 'Backend',
     difficulty: 'Intermediate',
-    estimatedHours: 250,
-    prerequisites: ['Basic Programming', 'Understanding of APIs'],
-    keywords: ['Node.js', 'Express', 'Databases', 'REST APIs', 'Authentication'],
+    estimatedHours: 220,
+    prerequisites: ['Basic JavaScript', 'Understanding of Internet'],
+    keywords: ['Node.js', 'Express', 'SQL', 'NoSQL', 'Security', 'APIs'],
     skills: [
       {
-        title: 'Node.js & Express Fundamentals',
-        description: 'Build server applications with Node.js and Express',
+        title: 'Node.js & Express Basics',
+        description: 'Server development with Node.js and the Express framework',
         level: 'Beginner',
         estimatedHours: 50,
         topics: [
           {
-            title: 'Node.js Basics',
-            description: 'Runtime environment and core modules',
+            title: 'Express REST APIs',
+            description: 'Routing, middleware, request parsing',
             subtopics: [
-              {
-                title: 'Event Loop & Async',
-                description: 'Understand Node.js event-driven architecture',
-              },
-              {
-                title: 'File System & Streams',
-                description: 'Work with files and data streams',
-              },
-              {
-                title: 'npm & Packages',
-                description: 'Manage dependencies with npm',
-              },
-            ],
-          },
-          {
-            title: 'Express Framework',
-            description: 'Build web servers with Express',
-            subtopics: [
-              {
-                title: 'Routing',
-                description: 'Define routes and handle requests',
-              },
-              {
-                title: 'Middleware',
-                description: 'Create and use middleware functions',
-              },
-              {
-                title: 'Error Handling',
-                description: 'Proper error handling strategies',
-              },
-            ],
-          },
-        ],
+              { title: 'Express Routing', description: 'Define HTTP methods and path routes' },
+              { title: 'Middleware Functions', description: 'Configure custom request processing logic' }
+            ]
+          }
+        ]
       },
       {
-        title: 'Databases',
-        description: 'SQL and NoSQL database design and usage',
+        title: 'Databases & Mongoose',
+        description: 'Integrate relational and non-relational databases',
         level: 'Intermediate',
         estimatedHours: 60,
         topics: [
-          {
-            title: 'SQL Databases',
-            description: 'PostgreSQL, MySQL, and relational concepts',
-            subtopics: [
-              {
-                title: 'SQL Queries',
-                description: 'SELECT, INSERT, UPDATE, DELETE, JOINs',
-              },
-              {
-                title: 'Schema Design',
-                description: 'Normalization and relationships',
-              },
-              {
-                title: 'Indexes & Performance',
-                description: 'Query optimization techniques',
-              },
-            ],
-          },
           {
             title: 'NoSQL Databases',
-            description: 'MongoDB and document-based databases',
+            description: 'Connect, query, and design schemas in MongoDB using Mongoose',
             subtopics: [
-              {
-                title: 'MongoDB Basics',
-                description: 'Document storage and CRUD operations',
-              },
-              {
-                title: 'Mongoose ODM',
-                description: 'Object Document Mapper for MongoDB',
-              },
-              {
-                title: 'Aggregation Pipeline',
-                description: 'Complex data transformations',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'API Design & Authentication',
-        description: 'RESTful APIs and authentication mechanisms',
-        level: 'Intermediate',
-        estimatedHours: 50,
-        topics: [
-          {
-            title: 'REST APIs',
-            description: 'Design principles and best practices',
-            subtopics: [
-              {
-                title: 'HTTP Methods & Status Codes',
-                description: 'Proper use of GET, POST, PUT, DELETE',
-              },
-              {
-                title: 'API Versioning',
-                description: 'Manage API versions effectively',
-              },
-              {
-                title: 'Request Validation',
-                description: 'Validate input data',
-              },
-            ],
-          },
-          {
-            title: 'Authentication & Authorization',
-            description: 'Secure your APIs',
-            subtopics: [
-              {
-                title: 'JWT Tokens',
-                description: 'JSON Web Tokens for stateless auth',
-              },
-              {
-                title: 'Password Security',
-                description: 'Hashing and salting passwords',
-              },
-              {
-                title: 'Authorization Strategies',
-                description: 'Role-based access control (RBAC)',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Advanced Backend Topics',
-        description: 'Caching, testing, and deployment',
-        level: 'Advanced',
-        estimatedHours: 60,
-        topics: [
-          {
-            title: 'Caching & Performance',
-            description: 'Redis and caching strategies',
-            subtopics: [
-              {
-                title: 'Redis Basics',
-                description: 'In-memory data store',
-              },
-              {
-                title: 'Caching Strategies',
-                description: 'Cache-aside, write-through, etc.',
-              },
-            ],
-          },
-          {
-            title: 'Testing',
-            description: 'Unit, integration, and end-to-end tests',
-            subtopics: [
-              {
-                title: 'Unit Testing',
-                description: 'Jest and Mocha frameworks',
-              },
-              {
-                title: 'Integration Testing',
-                description: 'Test API endpoints',
-              },
-            ],
-          },
-          {
-            title: 'DevOps & Deployment',
-            description: 'Docker, CI/CD, and cloud platforms',
-            subtopics: [
-              {
-                title: 'Docker',
-                description: 'Containerize applications',
-              },
-              {
-                title: 'CI/CD Pipelines',
-                description: 'GitHub Actions, GitLab CI',
-              },
-              {
-                title: 'Cloud Platforms',
-                description: 'AWS, Heroku, DigitalOcean',
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Full Stack Developer',
-    title: 'Full Stack Developer Roadmap',
-    description: 'Master both frontend and backend development to build complete web applications.',
-    icon: '🚀',
-    category: 'Full Stack',
-    difficulty: 'Advanced',
-    estimatedHours: 400,
-    prerequisites: ['Basic HTML/CSS', 'Basic JavaScript', 'Basic Programming'],
-    keywords: ['React', 'Node.js', 'MongoDB', 'Express', 'Web Development'],
-    skills: [
-      {
-        title: 'Frontend Essentials',
-        description: 'HTML, CSS, and JavaScript fundamentals',
-        level: 'Beginner',
-        estimatedHours: 60,
-        topics: [
-          {
-            title: 'Web Fundamentals',
-            description: 'HTML5, CSS3, and JavaScript ES6+',
-            subtopics: [
-              {
-                title: 'HTML & Semantic Markup',
-                description: 'Proper HTML structure',
-              },
-              {
-                title: 'CSS & Responsive Design',
-                description: 'Modern CSS techniques',
-              },
-              {
-                title: 'JavaScript Fundamentals',
-                description: 'Core language concepts',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'React Development',
-        description: 'Modern frontend with React',
-        level: 'Intermediate',
-        estimatedHours: 80,
-        topics: [
-          {
-            title: 'React Ecosystem',
-            description: 'React, hooks, and state management',
-            subtopics: [
-              {
-                title: 'React Components',
-                description: 'Functional components and hooks',
-              },
-              {
-                title: 'State Management',
-                description: 'Redux, Context API, or Zustand',
-              },
-              {
-                title: 'Routing',
-                description: 'React Router for navigation',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Backend with Node.js',
-        description: 'Server-side development with Node.js and Express',
-        level: 'Intermediate',
-        estimatedHours: 80,
-        topics: [
-          {
-            title: 'Server Development',
-            description: 'Express and API development',
-            subtopics: [
-              {
-                title: 'Express Framework',
-                description: 'Create APIs and handle requests',
-              },
-              {
-                title: 'Middleware & Authentication',
-                description: 'Secure your APIs',
-              },
-              {
-                title: 'Error Handling',
-                description: 'Proper error management',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Databases & Data',
-        description: 'MongoDB and data modeling',
-        level: 'Intermediate',
-        estimatedHours: 60,
-        topics: [
-          {
-            title: 'Database Design',
-            description: 'Schema design and relationships',
-            subtopics: [
-              {
-                title: 'MongoDB & Mongoose',
-                description: 'Document database and ODM',
-              },
-              {
-                title: 'Data Modeling',
-                description: 'Design efficient schemas',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Tools & Deployment',
-        description: 'Build tools, testing, and deployment',
-        level: 'Advanced',
-        estimatedHours: 80,
-        topics: [
-          {
-            title: 'Development Tools',
-            description: 'Build tools and development workflow',
-            subtopics: [
-              {
-                title: 'Vite & Bundlers',
-                description: 'Modern build tools',
-              },
-              {
-                title: 'Testing',
-                description: 'Unit and integration tests',
-              },
-              {
-                title: 'Version Control',
-                description: 'Git and GitHub',
-              },
-            ],
-          },
-          {
-            title: 'Deployment & DevOps',
-            description: 'Deploy applications to production',
-            subtopics: [
-              {
-                title: 'Containerization',
-                description: 'Docker for deployment',
-              },
-              {
-                title: 'Cloud Platforms',
-                description: 'Heroku, Vercel, AWS',
-              },
-              {
-                title: 'CI/CD',
-                description: 'Automated testing and deployment',
-              },
-            ],
-          },
-        ],
-      },
-    ],
+              { title: 'Schema Design', description: 'Structured Mongoose schemas and relationships' },
+              { title: 'CRUD Queries', description: 'Optimize database CRUD actions and indexes' }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     name: 'React Developer',
     title: 'React Developer Roadmap',
-    description: 'Become an expert React developer with advanced techniques and best practices.',
+    description: 'Master building robust, high-performance web applications using React.',
     icon: '⚛️',
     category: 'Frontend',
     difficulty: 'Intermediate',
-    estimatedHours: 150,
-    prerequisites: ['JavaScript Fundamentals', 'HTML/CSS Basics'],
-    keywords: ['React', 'Hooks', 'State Management', 'Performance', 'Testing'],
+    estimatedHours: 140,
+    prerequisites: ['JavaScript ES6+', 'HTML/CSS Basics'],
+    keywords: ['React', 'Hooks', 'Vite', 'State Management', 'React Router'],
     skills: [
       {
-        title: 'React Foundations',
-        description: 'Core React concepts and APIs',
+        title: 'React Basics',
+        description: 'JSX, components architecture, props, and standard state management',
         level: 'Beginner',
-        estimatedHours: 40,
+        estimatedHours: 30,
         topics: [
           {
-            title: 'React Fundamentals',
-            description: 'Components, JSX, props, and state',
+            title: 'JSX & Rendering',
+            description: 'Understand JSX syntax, elements, and conditional rendering',
             subtopics: [
-              {
-                title: 'Functional Components',
-                description: 'Modern React component syntax',
-              },
-              {
-                title: 'Props & State',
-                description: 'Component data flow',
-              },
-              {
-                title: 'Rendering Lists',
-                description: 'Keys and efficient rendering',
-              },
-            ],
+              { title: 'JSX Syntax Rules', description: 'Translating HTML tags to React JSX elements' },
+              { title: 'Keys and Lists', description: 'Performant list rendering using key attributes' }
+            ]
           },
-        ],
+          {
+            title: 'Components & Props',
+            description: 'Reusable component structure and properties data flow',
+            subtopics: [
+              { title: 'Functional Components', description: 'Define presentation elements via standard functions' },
+              { title: 'Props Destructuring', description: 'Accessing parent properties efficiently' }
+            ]
+          }
+        ]
       },
       {
-        title: 'Hooks & State Management',
-        description: 'Advanced hooks and state management patterns',
+        title: 'State Management & Hooks',
+        description: 'Configure interactive interfaces using state hooks and context APIs',
         level: 'Intermediate',
         estimatedHours: 50,
         topics: [
           {
-            title: 'React Hooks',
-            description: 'useState, useEffect, and custom hooks',
+            title: 'React Hooks API',
+            description: 'Master useState, useEffect, and custom hooks',
             subtopics: [
-              {
-                title: 'State Hooks',
-                description: 'useState and useReducer',
-              },
-              {
-                title: 'Effect Hooks',
-                description: 'Side effects and cleanup',
-              },
-              {
-                title: 'Custom Hooks',
-                description: 'Reusable logic patterns',
-              },
-            ],
+              { title: 'useState Hooks', description: 'Manage local component states dynamically' },
+              { title: 'useEffect Lifecycles', description: 'Triggering side effects and dependency changes' }
+            ]
           },
           {
-            title: 'State Management',
-            description: 'Context API, Redux, or other libraries',
+            title: 'Global State Management',
+            description: 'Share app state across components using Context API',
             subtopics: [
-              {
-                title: 'Context API',
-                description: 'Built-in state management',
-              },
-              {
-                title: 'Redux Basics',
-                description: 'Predictable state container',
-              },
-            ],
-          },
-        ],
+              { title: 'Context Creation', description: 'Set up Provider and Consumer React contexts' }
+            ]
+          }
+        ]
       },
       {
-        title: 'Performance & Optimization',
-        description: 'Optimize React applications',
+        title: 'Advanced React & Performance',
+        description: 'Vite build tool, client-side routing, and rendering optimization',
         level: 'Advanced',
-        estimatedHours: 40,
+        estimatedHours: 60,
         topics: [
           {
-            title: 'Performance Optimization',
-            description: 'Memoization and code splitting',
+            title: 'React Router',
+            description: 'Client-side SPA route definitions and navigations',
             subtopics: [
-              {
-                title: 'Memoization',
-                description: 'React.memo, useMemo, useCallback',
-              },
-              {
-                title: 'Code Splitting',
-                description: 'Lazy loading components',
-              },
-              {
-                title: 'Profiling',
-                description: 'Performance analysis tools',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Testing & Best Practices',
-        description: 'Testing React components and project setup',
-        level: 'Intermediate',
-        estimatedHours: 40,
-        topics: [
-          {
-            title: 'Testing',
-            description: 'Jest and React Testing Library',
-            subtopics: [
-              {
-                title: 'Unit Testing',
-                description: 'Test individual components',
-              },
-              {
-                title: 'Integration Testing',
-                description: 'Test component interactions',
-              },
-            ],
+              { title: 'Route Definitions', description: 'Setting up routing routes and URL parameter hooks' }
+            ]
           },
           {
-            title: 'Project Setup',
-            description: 'Create React App and alternatives',
+            title: 'Performance Memoization',
+            description: 'Optimize renders using memoization structures',
             subtopics: [
-              {
-                title: 'Build Tools',
-                description: 'Vite, Create React App',
-              },
-              {
-                title: 'Styling',
-                description: 'CSS, Tailwind, styled-components',
-              },
-            ],
-          },
-        ],
-      },
-    ],
+              { title: 'React.memo', description: 'Prevent unnecessary re-renders of child props' },
+              { title: 'useMemo & useCallback', description: 'Cache heavy values and functions contextually' }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
-    name: 'Node.js Developer',
-    title: 'Node.js Developer Roadmap',
-    description: 'Master Node.js and server-side JavaScript development.',
-    icon: '🟢',
-    category: 'Backend',
-    difficulty: 'Intermediate',
+    name: 'MERN Stack',
+    title: 'MERN Stack Developer Roadmap',
+    description: 'Learn full-stack JavaScript development using MongoDB, Express, React, and Node.js.',
+    icon: '🥞',
+    category: 'Full Stack',
+    difficulty: 'Advanced',
     estimatedHours: 180,
-    prerequisites: ['JavaScript Fundamentals', 'Understanding of Servers'],
-    keywords: ['Node.js', 'Express', 'Async', 'Databases', 'APIs'],
+    prerequisites: ['Frontend Developer Roadmap', 'Backend Developer Roadmap'],
+    keywords: ['MERN', 'MongoDB', 'Express', 'React', 'Node.js', 'Full Stack'],
     skills: [
       {
-        title: 'Node.js Fundamentals',
-        description: 'Core Node.js concepts and modules',
+        title: 'MongoDB Database',
+        description: 'Learn NoSQL document data modeling and queries',
+        level: 'Intermediate',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'Data Modeling',
+            description: 'Structuring collections and embedded documents',
+            subtopics: [
+              { title: 'Embedded Docs', description: 'Define child arrays vs reference IDs' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Express.js Backend API',
+        description: 'Build robust REST APIs with routing, validation, and error handlers',
+        level: 'Intermediate',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'REST Architecture',
+            description: 'Setting up semantic endpoints and HTTP request handlers',
+            subtopics: [
+              { title: 'Express Router', description: 'Separate resource routing modules cleanly' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'React.js Frontend UI',
+        description: 'Build interactive SPA client consuming server endpoints',
+        level: 'Intermediate',
+        estimatedHours: 60,
+        topics: [
+          {
+            title: 'HTTP Integration',
+            description: 'Configure Axios clients to authenticate and fetch databases',
+            subtopics: [
+              { title: 'Axios Interceptors', description: 'Attach JWT credentials automatically' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Node.js Core Runtime',
+        description: 'Configure asynchronous JavaScript runtimes and event engines',
+        level: 'Intermediate',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'Node Event Loop',
+            description: 'Asynchronous task schedules and non-blocking I/O threads',
+            subtopics: [
+              { title: 'Task Queue', description: 'Understand microtasks and macrotasks execution' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: 'Docker',
+    title: 'Docker & Containerization Roadmap',
+    description: 'Master containerization concepts, building custom images, and managing service environments.',
+    icon: '🐳',
+    category: 'DevOps',
+    difficulty: 'Intermediate',
+    estimatedHours: 110,
+    prerequisites: ['Basic Linux Commands', 'Server Deployments Overview'],
+    keywords: ['Docker', 'Containers', 'Docker Compose', 'Microservices', 'Dockerfiles'],
+    skills: [
+      {
+        title: 'Containerization Basics',
+        description: 'Differentiate containers from virtual machines and master Docker CLI commands',
+        level: 'Beginner',
+        estimatedHours: 20,
+        topics: [
+          {
+            title: 'Docker Engine CLI',
+            description: 'Run, stop, inspect, and list containers',
+            subtopics: [
+              { title: 'Container Lifecycle', description: 'docker run, stop, start, exec' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Dockerfiles & Custom Images',
+        description: 'Build reproducible developer environments using structured multi-stage Dockerfiles',
+        level: 'Intermediate',
+        estimatedHours: 30,
+        topics: [
+          {
+            title: 'Dockerfile Directives',
+            description: 'FROM, RUN, COPY, EXPOSE, CMD, ENTRYPOINT definitions',
+            subtopics: [
+              { title: 'Caching Layers', description: 'Ordering steps to leverage Docker cache layers' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Multi-container with Docker Compose',
+        description: 'Define and orchestrate linked microservices inside unified local environments',
+        level: 'Intermediate',
+        estimatedHours: 30,
+        topics: [
+          {
+            title: 'Compose Schemas',
+            description: 'Write docker-compose.yml with services, networks, and volumes',
+            subtopics: [
+              { title: 'Services Networking', description: 'Configure links and internal ports mappings' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Production Deployments & Registries',
+        description: 'Push custom images to Docker Hub and deploy to container platforms',
+        level: 'Advanced',
+        estimatedHours: 30,
+        topics: [
+          {
+            title: 'Container Security',
+            description: 'Best practices for running non-root users inside containers',
+            subtopics: [
+              { title: 'Image Scanning', description: 'Scrutinizing vulnerability layers' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: 'DevOps',
+    title: 'DevOps & Infrastructure Roadmap',
+    description: 'Learn modern DevOps pipelines, automation, orchestration, and monitoring.',
+    icon: '♾️',
+    category: 'DevOps',
+    difficulty: 'Advanced',
+    estimatedHours: 160,
+    prerequisites: ['Basic Linux', 'Docker Containerization'],
+    keywords: ['CI/CD', 'GitHub Actions', 'Terraform', 'Prometheus', 'Grafana', 'Ansible'],
+    skills: [
+      {
+        title: 'Linux Administration & Scripting',
+        description: 'Master Bash terminal scripting, process management, and cron jobs',
         level: 'Beginner',
         estimatedHours: 40,
         topics: [
           {
-            title: 'Node.js Basics',
-            description: 'Event loop, modules, and core APIs',
+            title: 'Terminal Mastery',
+            description: 'Permissions management, network diagnostic tools, process trees',
             subtopics: [
-              {
-                title: 'Event-Driven Architecture',
-                description: 'Understand the event loop',
-              },
-              {
-                title: 'Modules & npm',
-                description: 'CommonJS and package management',
-              },
-              {
-                title: 'File System & Streams',
-                description: 'Read and write files efficiently',
-              },
-            ],
-          },
-        ],
+              { title: 'Bash scripting', description: 'Write automation scripts with variables and pipes' }
+            ]
+          }
+        ]
       },
       {
-        title: 'Express.js Framework',
-        description: 'Build APIs with Express',
-        level: 'Intermediate',
-        estimatedHours: 50,
-        topics: [
-          {
-            title: 'Express Fundamentals',
-            description: 'Routing and middleware',
-            subtopics: [
-              {
-                title: 'Routing',
-                description: 'HTTP methods and routes',
-              },
-              {
-                title: 'Middleware',
-                description: 'Request/response processing',
-              },
-              {
-                title: 'Error Handling',
-                description: 'Error middleware and strategies',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Asynchronous Programming',
-        description: 'Promises, async/await, and callbacks',
+        title: 'CI/CD Automation Pipelines',
+        description: 'Integrate automated tests, code linters, and deploy actions in GitHub Actions',
         level: 'Intermediate',
         estimatedHours: 40,
         topics: [
           {
-            title: 'Async Patterns',
-            description: 'Callbacks, promises, async/await',
+            title: 'GitHub Workflows',
+            description: 'Configure automated actions based on pull requests and branch merges',
             subtopics: [
-              {
-                title: 'Promises',
-                description: 'Promise-based async code',
-              },
-              {
-                title: 'Async/Await',
-                description: 'Modern async syntax',
-              },
-              {
-                title: 'Error Handling',
-                description: 'Try/catch and promise rejection',
-              },
-            ],
-          },
-        ],
+              { title: 'Workflow Actions', description: 'Write clean workflow YAML configuration files' }
+            ]
+          }
+        ]
       },
       {
-        title: 'Databases & ORMs',
-        description: 'Working with databases in Node.js',
-        level: 'Intermediate',
-        estimatedHours: 50,
-        topics: [
-          {
-            title: 'Database Integration',
-            description: 'MongoDB, PostgreSQL, and ORMs',
-            subtopics: [
-              {
-                title: 'MongoDB & Mongoose',
-                description: 'NoSQL database and ODM',
-              },
-              {
-                title: 'SQL Databases',
-                description: 'PostgreSQL with Node.js',
-              },
-              {
-                title: 'Database Design',
-                description: 'Schema design principles',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        title: 'Deployment & DevOps',
-        description: 'Deploy Node.js applications',
+        title: 'Infrastructure as Code (IaC)',
+        description: 'Provision cloud servers declaratively using Terraform plans',
         level: 'Advanced',
+        estimatedHours: 50,
+        topics: [
+          {
+            title: 'Terraform Plans',
+            description: 'Write resources definitions, state handling, and variables',
+            subtopics: [
+              { title: 'Terraform Providers', description: 'Integrating AWS, DigitalOcean, or Azure resources' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Monitoring & Logs Metrics',
+        description: 'Analyze server health indicators using Prometheus metrics and Grafana visual panels',
+        level: 'Intermediate',
+        estimatedHours: 30,
+        topics: [
+          {
+            title: 'Metrics Scopes',
+            description: 'Setting up exporters and graphing key system resource states',
+            subtopics: [
+              { title: 'Grafana Dashboards', description: 'Combine query stats into visual graphics panels' }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: 'Python',
+    title: 'Python Software Engineer Roadmap',
+    description: 'Complete path to master Python, object-oriented programming, and web services.',
+    icon: '🐍',
+    category: 'Other',
+    difficulty: 'Intermediate',
+    estimatedHours: 170,
+    prerequisites: ['Computer Programming Basics'],
+    keywords: ['Python', 'OOP', 'Django', 'Flask', 'Data Analysis', 'NumPy'],
+    skills: [
+      {
+        title: 'Python Language Basics',
+        description: 'Master syntax rules, list comprehensions, and built-in datastructures',
+        level: 'Beginner',
+        estimatedHours: 30,
+        topics: [
+          {
+            title: 'Python Datatypes',
+            description: 'Define lists, tuples, sets, dictionaries, and execution control',
+            subtopics: [
+              { title: 'Comprehensions', description: 'Expressive lists and dicts generation syntax' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Object-Oriented Python',
+        description: 'Implement inheritance, operator overloading, and exception controls',
+        level: 'Intermediate',
         estimatedHours: 40,
         topics: [
           {
-            title: 'Production Deployment',
-            description: 'Containerization and cloud deployment',
+            title: 'OOP Architecture',
+            description: 'Classes declarations, initialization constructors, super functions',
             subtopics: [
-              {
-                title: 'Docker',
-                description: 'Containerize Node.js apps',
-              },
-              {
-                title: 'Cloud Platforms',
-                description: 'Heroku, AWS, DigitalOcean',
-              },
-              {
-                title: 'Monitoring & Logging',
-                description: 'Production monitoring',
-              },
-            ],
-          },
-        ],
+              { title: 'Method Overriding', description: 'Polymorphic parent class updates in child classes' }
+            ]
+          }
+        ]
       },
-    ],
+      {
+        title: 'Python Web Frameworks',
+        description: 'Deploy REST servers using Flask packages or Django ORM models',
+        level: 'Intermediate',
+        estimatedHours: 50,
+        topics: [
+          {
+            title: 'Flask API endpoints',
+            description: 'Route decorators, request payloads, JSON response structures',
+            subtopics: [
+              { title: 'Flask Server', description: 'Basic setup and hot reload configurations' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Data Wrangling Tools',
+        description: 'Process raw analytics data files using NumPy arrays and Pandas dataframes',
+        level: 'Advanced',
+        estimatedHours: 50,
+        topics: [
+          {
+            title: 'Pandas Dataframes',
+            description: 'Load CSV records, filter query rows, aggregate statistical values',
+            subtopics: [
+              { title: 'Data Cleaning', description: 'Impute missing metrics and clean duplicate records' }
+            ]
+          }
+        ]
+      }
+    ]
   },
-]
+  {
+    name: 'Java',
+    title: 'Java Enterprise Developer Roadmap',
+    description: 'Learn Java syntax, OOP design patterns, Spring Boot APIs, and Hibernate integrations.',
+    icon: '☕',
+    category: 'Other',
+    difficulty: 'Advanced',
+    estimatedHours: 180,
+    prerequisites: ['Computer Programming Basics'],
+    keywords: ['Java', 'Spring Boot', 'Hibernate', 'OOP', 'Maven', 'APIs'],
+    skills: [
+      {
+        title: 'Java Basics & OOP Syntax',
+        description: 'Understand compiler typing, classes definition, interfaces, and packages',
+        level: 'Beginner',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'Java Class Structures',
+            description: 'Encapsulation modifiers, attributes accessors, constructors setup',
+            subtopics: [
+              { title: 'Interfaces', description: 'Define abstraction patterns using Java interfaces' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Collections & Lambda Streams',
+        description: 'Master Lists/Maps mappings and execute functional query streams',
+        level: 'Intermediate',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'Streams Pipelines',
+            description: 'Filter arrays, map elements, collect statistics using streams',
+            subtopics: [
+              { title: 'Lambda Expressions', description: 'Pass inline anonymous functions elegantly' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'Spring Boot REST Framework',
+        description: 'Generate production backend servers using Spring RestController and Injection autowires',
+        level: 'Advanced',
+        estimatedHours: 60,
+        topics: [
+          {
+            title: 'Spring Controller',
+            description: 'Map URL requests parameters, serialize JSON records',
+            subtopics: [
+              { title: 'Dependency Injection', description: 'Autowired component instances configurations' }
+            ]
+          }
+        ]
+      },
+      {
+        title: 'JPA Entities & SQL DB',
+        description: 'Connect databases using Hibernate JPA entity classes mappings',
+        level: 'Intermediate',
+        estimatedHours: 40,
+        topics: [
+          {
+            title: 'ORM JPA Entity',
+            description: 'Table annotations, primary keys generation strategies, table relationships',
+            subtopics: [
+              { title: 'Spring Data Repository', description: 'Extend JpaRepository interfaces' }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];

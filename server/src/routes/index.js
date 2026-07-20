@@ -10,6 +10,7 @@ import revisionRoutes from './revisionRoutes.js'
 import gamificationRoutes from './gamificationRoutes.js'
 import aiAssistantRoutes from './aiAssistantRoutes.js'
 import collaborationRoutes from './collaborationRoutes.js'
+import searchRoutes from './searchRoutes.js'
 
 const router = express.Router()
 
@@ -24,5 +25,6 @@ router.use('/revisions', revisionRoutes)
 router.use('/gamification', gamificationRoutes)
 router.use('/ai', aiAssistantRoutes)
 router.use('/collaboration', collaborationRoutes)
+router.use('/search', searchRoutes)
 
 export default router

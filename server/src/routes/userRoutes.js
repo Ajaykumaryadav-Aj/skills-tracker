@@ -18,6 +18,7 @@ router.use(auth)
 
 router.get('/profile', getProfile)
 router.put('/profile', updateProfileValidator, validate, updateProfile)
+
 router.post('/avatar', uploadAvatar, uploadProfileAvatar)
 router.delete('/avatar', deleteProfileAvatar)
 router.put('/change-password', changePasswordLimiter, changePasswordValidator, validate, changePassword)

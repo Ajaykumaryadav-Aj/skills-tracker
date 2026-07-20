@@ -5,8 +5,9 @@ export const requireRole = (...allowedRoles) => async (req, res, next) => {
   try {
     if (!req.user?.id) return res.status(401).json({ success: false, message: 'Unauthorized', errors: [] })
 
-    const user = await User.findById(req.user.id).select('name email role')
+    const user = await User.findById(req.user.id).select('name email role isActive')
     if (!user) return res.status(401).json({ success: false, message: 'Unauthorized', errors: [] })
+    if (user.isActive === false) return res.status(403).json({ success: false, message: 'Your account has been deactivated. Please contact support.', errors: [] })
 
     const role = user.role || 'user'
     if (!allowedRoles.includes(role)) {

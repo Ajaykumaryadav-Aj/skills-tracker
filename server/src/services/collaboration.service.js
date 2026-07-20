@@ -3,10 +3,7 @@ import mongoose from 'mongoose'
 import Activity from '../models/Activity.js'
 import Bookmark from '../models/Bookmark.js'
 import Comment from '../models/Comment.js'
-import Notification from '../models/Notification.js'
-import Reminder from '../models/Reminder.js'
 import Skill from '../models/Skill.js'
-import Team from '../models/Team.js'
 import User from '../models/User.js'
 import { getGamificationSummary } from './gamification.service.js'
 
@@ -15,19 +12,7 @@ export const createActivity = async ({ userId, type, title, description = '', so
   return Activity.create({ userId, type, title, description, sourceType, sourceId, metadata }).catch(() => null)
 }
 
-export const createNotification = async ({ userId, type, title, message = '', sourceType = '', sourceId, metadata = {} }) => {
-  if (!userId || !type || !title) return null
-  return Notification.create({ userId, type, title, message, sourceType, sourceId, metadata }).catch(() => null)
-}
 
-export const createInviteCode = () => crypto.randomBytes(5).toString('hex')
-
-export const getTeamRole = (team, userId) => {
-  const member = (team.members || []).find((item) => String(item.userId || '') === String(userId) && item.status === 'active')
-  return member?.role || ''
-}
-
-export const requireTeamAdmin = (team, userId) => ['owner', 'admin'].includes(getTeamRole(team, userId))
 
 export const findKnowledgeTarget = async ({ userId, targetType, targetId }) => {
   if (!mongoose.Types.ObjectId.isValid(targetId)) return null
@@ -85,15 +70,8 @@ export const getPublicProfileBySlug = async (slug) => {
 }
 
 export const getCollaborationSummary = async (userId) => {
-  const now = new Date()
-  const [notifications, unreadNotifications, teams, activity, reminders] = await Promise.all([
-    Notification.find({ userId }).sort({ createdAt: -1 }).limit(5).lean(),
-    Notification.countDocuments({ userId, readAt: null }),
-    Team.find({ 'members.userId': userId, 'members.status': 'active' }).sort({ updatedAt: -1 }).limit(4).lean(),
-    Activity.find({ userId }).sort({ createdAt: -1 }).limit(8).lean(),
-    Reminder.find({ userId, completedAt: null, date: { $gte: new Date(now.toDateString()) } }).sort({ date: 1, time: 1 }).limit(5).lean(),
-  ])
-  return { notifications, unreadNotifications, teams, activity, reminders }
+  const activity = await Activity.find({ userId }).sort({ createdAt: -1 }).limit(8).lean()
+  return { activity }
 }
 
 export const serializeComments = async (query) => {

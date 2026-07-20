@@ -48,7 +48,7 @@ function Breadcrumbs() {
 
 export default function PageHeader({ eyebrow, title, description, icon: Icon, actions }) {
   return (
-    <header className="reveal-item mb-6 overflow-hidden rounded-panel border border-line bg-white/80 p-5 shadow-card backdrop-blur sm:p-6">
+    <header className="reveal-item mb-6 overflow-hidden rounded-panel border border-line bg-white/80 p-4 shadow-card backdrop-blur sm:p-6">
       <Breadcrumbs />
       <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
         <div className="min-w-0">

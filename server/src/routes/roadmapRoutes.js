@@ -8,6 +8,7 @@ import {
   addSkillToRoadmapValidator,
   updateRoadmapSkillValidator,
   addTopicToRoadmapSkillValidator,
+  reorderRoadmapSkillsValidator,
 } from '../validations/roadmapValidators.js'
 import {
   createRoadmap,
@@ -24,6 +25,7 @@ import {
   addTopicToSkill,
   deleteRoadmapSkill,
   getRoadmapStats,
+  reorderRoadmapSkills,
 } from '../controllers/roadmapController.js'
 import { cacheResponse } from '../middlewares/cacheMiddleware.js'
 import { mongoIdParam, safeNameParam } from '../validations/commonValidators.js'
@@ -63,6 +65,7 @@ router.post('/:templateId/import', importTemplateValidator, validate, importTemp
 
 // Skills management
 router.post('/:roadmapId/skills', addSkillToRoadmapValidator, validate, addSkillToRoadmap)
+router.put('/:roadmapId/skills/reorder', reorderRoadmapSkillsValidator, validate, reorderRoadmapSkills)
 router.put('/:roadmapId/skills/:skillId', updateRoadmapSkillValidator, validate, updateRoadmapSkill)
 router.delete(
   '/:roadmapId/skills/:skillId',

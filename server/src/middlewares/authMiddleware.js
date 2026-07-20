@@ -3,6 +3,7 @@ import Token from '../models/Token.js'
 import env from '../config/env.js'
 import logger from '../config/logger.js'
 import { hashToken } from '../utils/token.js'
+import User from '../models/User.js'
 
 export default async function auth(req, res, next) {
   const authHeader = req.headers.authorization
@@ -28,6 +29,7 @@ export default async function auth(req, res, next) {
     }
 
     req.user = decoded
+    User.updateOne({ _id: decoded.id }, { $set: { lastActive: new Date() } }).catch(() => null)
     next()
   } catch (err) {
     const isExpired = err.name === 'TokenExpiredError'

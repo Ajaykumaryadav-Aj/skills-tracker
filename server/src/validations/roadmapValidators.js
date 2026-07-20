@@ -68,3 +68,8 @@ export const addTopicToRoadmapSkillValidator = [
     .isLength({ max: 1000 })
     .withMessage('Description must be 1000 characters or less'),
 ]
+
+export const reorderRoadmapSkillsValidator = [
+  param('roadmapId').isMongoId().withMessage('Invalid roadmap ID'),
+  body('skillIds').isArray().withMessage('skillIds must be an array'),
+]

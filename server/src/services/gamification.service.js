@@ -7,7 +7,6 @@ import Topic from '../models/Topic.js'
 import User from '../models/User.js'
 import XPHistory from '../models/XPHistory.js'
 import Activity from '../models/Activity.js'
-import Notification from '../models/Notification.js'
 import { getUserStreakSummary } from './streakService.js'
 
 export const XP_ACTIONS = {
@@ -164,8 +163,10 @@ const unlockAchievement = async (userId, achievement) => {
   })
 
   const badge = BADGES.get(achievement.badgeKey)
+  let badgeAwarded = false
   if (badge && !profile.badges.some((item) => item.key === badge.key)) {
     profile.badges.push({ ...badge, unlockedAt: new Date() })
+    badgeAwarded = true
   }
 
   await profile.save()
@@ -178,15 +179,8 @@ const unlockAchievement = async (userId, achievement) => {
     sourceId: new mongoose.Types.ObjectId(),
     metadata: { achievementKey: achievement.key, badgeKey: achievement.badgeKey },
   }).catch(() => null)
-  await Notification.create({
-    userId,
-    type: 'Achievement',
-    title: `Achievement unlocked: ${achievement.title}`,
-    message: achievement.description,
-    sourceType: 'achievement',
-    sourceId: new mongoose.Types.ObjectId(),
-    metadata: { achievementKey: achievement.key, badgeKey: achievement.badgeKey },
-  }).catch(() => null)
+
+
   await awardXp({
     userId,
     action: 'ACHIEVEMENT_UNLOCKED',
@@ -258,21 +252,23 @@ export const evaluateAchievements = async (userId) => {
 
 export const awardGoalAndStreakXp = async (userId, progress, sourceId) => {
   const date = toDateKey(new Date())
-  const rewards = []
+  
   if (progress?.goalProgress?.today?.percent >= 100) {
-    rewards.push(awardXp({ userId, action: 'DAILY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:daily:${date}` }))
+    await awardXp({ userId, action: 'DAILY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:daily:${date}` })
   }
+
   if (progress?.goalProgress?.week?.percent >= 100) {
-    rewards.push(awardXp({ userId, action: 'WEEKLY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:weekly:${weekKey()}` }))
+    await awardXp({ userId, action: 'WEEKLY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:weekly:${weekKey()}` })
   }
+
   if (progress?.goalProgress?.month?.percent >= 100) {
-    rewards.push(awardXp({ userId, action: 'MONTHLY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:monthly:${monthKey()}` }))
+    await awardXp({ userId, action: 'MONTHLY_GOAL_COMPLETED', sourceType: 'goal', sourceId, eventKey: `goal:monthly:${monthKey()}` })
   }
+
   const streak = progress?.streak || await getUserStreakSummary(userId)
   if ((streak.currentStreak || 0) > 1) {
-    rewards.push(awardXp({ userId, action: 'STREAK_DAY', sourceType: 'streak', sourceId, eventKey: `streak:${date}` }))
+    await awardXp({ userId, action: 'STREAK_DAY', sourceType: 'streak', sourceId, eventKey: `streak:${date}` })
   }
-  await Promise.all(rewards)
 }
 
 export const getChallenges = async (userId) => {

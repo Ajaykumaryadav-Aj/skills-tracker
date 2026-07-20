@@ -5,6 +5,7 @@ import Topic from '../models/Topic.js'
 import User from '../models/User.js'
 import { getUserStreakSummary } from '../services/streakService.js'
 import { awardGoalAndStreakXp, awardXp } from '../services/gamification.service.js'
+import { createActivity } from '../services/collaboration.service.js'
 
 const findOwnedTopic = (userId, skillId, topicId) =>
   Topic.findOne({
@@ -206,15 +207,26 @@ export const createLearningLog = async (req, res, next) => {
     const progress = await buildLearningProgress(req.user.id)
     await awardGoalAndStreakXp(req.user.id, progress, log._id)
 
+    await createActivity({
+      userId: req.user.id,
+      type: 'session-added',
+      title: 'Added a study session',
+      description: `Logged a ${log.duration} mins study session for topic: "${topic.title}"`,
+      sourceType: 'learning-session',
+      sourceId: log._id,
+    })
+
     res.status(201).json({ log })
   } catch (err) {
     next(err)
   }
 }
 
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const getLearningLogs = async (req, res, next) => {
   try {
-    const { startDate, endDate, skillId, topicId, sessionType } = req.query
+    const { startDate, endDate, skillId, topicId, sessionType, search = '', sort = 'latest' } = req.query
     const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1)
     const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 100)
     const filter = { user: req.user.id }
@@ -225,9 +237,21 @@ export const getLearningLogs = async (req, res, next) => {
     if (startDate) filter.date.$gte = new Date(startDate)
     if (endDate) filter.date.$lte = new Date(endDate)
 
+    const searchTerm = String(search).trim()
+    if (searchTerm) {
+      filter.notes = new RegExp(escapeRegex(searchTerm), 'i')
+    }
+
+    const sortOptions = {
+      latest: { date: -1, startTime: -1 },
+      oldest: { date: 1, startTime: 1 },
+      duration: { duration: -1, date: -1 },
+      notes: { notes: 1, date: -1 },
+    }
+
     const [logs, total] = await Promise.all([
       populateLogQuery(LearningLog.find(filter))
-        .sort({ date: -1 })
+        .sort(sortOptions[sort] || sortOptions.latest)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -243,6 +267,8 @@ export const getLearningLogs = async (req, res, next) => {
         limit,
         total,
         totalPages: Math.max(Math.ceil(total / limit), 1),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1,
       },
     })
   } catch (err) {

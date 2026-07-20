@@ -6,8 +6,8 @@ const providerDefaults = {
   claude: 'claude-3-5-haiku-latest',
   mock: 'local-fallback',
 }
-const providerTimeoutMs = 30000
-const geminiMinIntervalMs = 15000
+const providerTimeoutMs = 120000          // 2 minutes — enough for large structured roadmap JSON
+const geminiMinIntervalMs = 2000          // 2s safety gap between sequential Gemini calls (not 15s)
 let lastGeminiRequestAt = 0
 let geminiQueue = Promise.resolve()
 
@@ -76,7 +76,7 @@ const systemInstruction = (schemaHint) => [
   'Keep the JSON keys exactly aligned with the requested schema.',
 ].filter(Boolean).join(' ')
 
-const callOpenAI = async ({ prompt, schemaHint }) => {
+const callOpenAI = async ({ prompt, schemaHint, maxOutputTokens }) => {
   const config = providerConfig()
   const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -87,6 +87,7 @@ const callOpenAI = async ({ prompt, schemaHint }) => {
     body: JSON.stringify({
       model: config.model,
       temperature: 0.4,
+      max_tokens: maxOutputTokens || 6000,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemInstruction(schemaHint) },
@@ -99,14 +100,14 @@ const callOpenAI = async ({ prompt, schemaHint }) => {
   return parseJson(data.choices?.[0]?.message?.content)
 }
 
-const callGeminiOnce = async ({ prompt, schemaHint, model }) => {
+const callGeminiOnce = async ({ prompt, schemaHint, model, maxOutputTokens }) => {
   const config = providerConfig()
   const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: `${systemInstruction(schemaHint)}\n\n${prompt}` }] }],
-      generationConfig: { temperature: 0.35, responseMimeType: 'application/json', maxOutputTokens: 6000 },
+      generationConfig: { temperature: 0.35, responseMimeType: 'application/json', maxOutputTokens: maxOutputTokens || 6000 },
     }),
   })
   if (!response.ok) {
@@ -118,21 +119,21 @@ const callGeminiOnce = async ({ prompt, schemaHint, model }) => {
   return parseJson(text)
 }
 
-const callGemini = async ({ prompt, schemaHint }) => {
+const callGemini = async ({ prompt, schemaHint, maxOutputTokens }) => {
   const config = providerConfig()
   return runGeminiQueued(async () => {
     try {
-      return await callGeminiOnce({ prompt, schemaHint, model: config.model })
+      return await callGeminiOnce({ prompt, schemaHint, model: config.model, maxOutputTokens })
     } catch (err) {
       if (config.model !== providerDefaults.gemini && /Gemini request failed: (400|404)/.test(err.message)) {
-        return callGeminiOnce({ prompt, schemaHint, model: providerDefaults.gemini })
+        return callGeminiOnce({ prompt, schemaHint, model: providerDefaults.gemini, maxOutputTokens })
       }
       throw err
     }
   })
 }
 
-const callClaude = async ({ prompt, schemaHint }) => {
+const callClaude = async ({ prompt, schemaHint, maxOutputTokens }) => {
   const config = providerConfig()
   const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -143,7 +144,7 @@ const callClaude = async ({ prompt, schemaHint }) => {
     },
     body: JSON.stringify({
       model: config.model,
-      max_tokens: 3000,
+      max_tokens: maxOutputTokens || 3000,
       temperature: 0.4,
       system: systemInstruction(schemaHint),
       messages: [{ role: 'user', content: prompt }],
@@ -154,7 +155,7 @@ const callClaude = async ({ prompt, schemaHint }) => {
   return parseJson(data.content?.[0]?.text)
 }
 
-export const generateWithProvider = async ({ prompt, schemaHint, fallback }) => {
+export const generateWithProvider = async ({ prompt, schemaHint, fallback, maxOutputTokens }) => {
   const config = providerConfig()
   if (!config.apiKey || config.provider === 'mock') {
     return { output: fallback(), provider: 'mock', model: providerDefaults.mock, fallback: true }
@@ -163,7 +164,7 @@ export const generateWithProvider = async ({ prompt, schemaHint, fallback }) => 
   try {
     const caller = config.provider === 'openai' ? callOpenAI : config.provider === 'gemini' ? callGemini : config.provider === 'claude' ? callClaude : null
     if (!caller) throw new Error('Unsupported AI provider')
-    const output = await caller({ prompt, schemaHint })
+    const output = await caller({ prompt, schemaHint, maxOutputTokens })
     if (!output) throw new Error('AI provider returned invalid JSON')
     return { output, provider: config.provider, model: config.model, fallback: false }
   } catch (err) {

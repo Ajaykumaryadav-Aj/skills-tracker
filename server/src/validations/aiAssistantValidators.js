@@ -4,17 +4,24 @@ import { AI_HISTORY_TYPES } from '../models/AIHistory.js'
 const textField = (field, label, max = 500) =>
   body(field).trim().notEmpty().withMessage(`${label} is required`).isLength({ max }).withMessage(`${label} is too long`)
 
-export const roadmapValidator = [
-  textField('skill', 'Skill'),
-  textField('currentLevel', 'Current level', 80),
-  textField('targetLevel', 'Target level', 80),
-  body('dailyStudyHours').isFloat({ min: 0.25, max: 12 }).withMessage('Daily study hours must be between 0.25 and 12'),
+export const chatValidator = [
+  textField('message', 'Message', 2000),
+  body('history').optional().isArray().withMessage('History must be an array'),
 ]
 
-export const plannerValidator = [
-  body('dailyStudyHours').isFloat({ min: 0.25, max: 12 }).withMessage('Daily study hours must be between 0.25 and 12'),
-  body('weeklyGoal').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Weekly goal is too long'),
-  body('availability').optional({ checkFalsy: true }).trim().isLength({ max: 1000 }).withMessage('Availability is too long'),
+export const debugValidator = [
+  textField('code', 'Code', 10000),
+  body('language').optional().trim().isLength({ max: 80 }),
+]
+
+export const notesValidator = [
+  textField('topic', 'Topic'),
+  body('type').isIn(['Detailed Notes', 'Revision Notes', 'Concise Summary']).withMessage('Invalid notes type'),
+  body('level').isIn(['Simple Language (ELIF5)', 'Technical / Academic']).withMessage('Invalid language level'),
+]
+
+export const resourcesValidator = [
+  textField('topic', 'Topic'),
 ]
 
 export const notesSummaryValidator = [
@@ -25,15 +32,16 @@ export const notesSummaryValidator = [
     .withMessage('Notes must be between 3 and 20000 characters'),
 ]
 
-export const quizValidator = [
-  textField('topic', 'Topic'),
-  body('difficulty').isIn(['Beginner', 'Intermediate', 'Advanced']).withMessage('Difficulty is invalid'),
-  body('count').optional().isInt({ min: 1, max: 20 }).withMessage('Question count must be between 1 and 20'),
+export const plannerValidator = [
+  textField('skill', 'Skill'),
+  body('dailyStudyHours').isFloat({ min: 0.25, max: 12 }).withMessage('Daily study hours must be between 0.25 and 12'),
+  body('weeklyGoal').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Weekly goal is too long'),
 ]
 
 export const interviewValidator = [
   textField('topic', 'Topic'),
-  body('skill').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('Skill is too long'),
+  body('type').optional().isIn(['Technical', 'HR', 'Follow-up']).withMessage('Question type is invalid'),
+  body('difficulty').optional().isIn(['Beginner', 'Intermediate', 'Advanced']).withMessage('Difficulty is invalid'),
 ]
 
 export const aiHistoryValidator = [

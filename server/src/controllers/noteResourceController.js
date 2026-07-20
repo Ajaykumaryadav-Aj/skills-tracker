@@ -3,6 +3,7 @@ import path from 'path'
 import Skill from '../models/Skill.js'
 import { isRichTextBlank, sanitizeRichText } from '../utils/richText.js'
 import { uploadStream, deleteFile } from '../services/storage.service.js'
+import { logToFile } from '../utils/fileLogger.js'
 
 const resourceTypes = new Set(['YouTube', 'Documentation', 'GitHub', 'Website', 'PDF', 'Course', 'article', 'video', 'course', 'documentation', 'tutorial', 'other'])
 
@@ -379,6 +380,15 @@ export const addResource = async (req, res, next) => {
     result.topic.resources.push(resource)
 
     await result.skill.save()
+
+    if (req.file) {
+      logToFile('uploads', 'info', `Resource file uploaded for topic ${topicId}`, {
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+      })
+    }
+
     res.status(201).json({ resource: result.topic.resources[result.topic.resources.length - 1] })
   } catch (err) {
     next(err)

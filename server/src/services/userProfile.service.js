@@ -15,11 +15,19 @@ export const profileFields = [
   'experienceLevel',
   'timezone',
   'learningGoal',
+  'notificationPreferences',
+  'learningGoals',
 ]
 
 export const sanitizeProfilePayload = (body) =>
   profileFields.reduce((payload, field) => {
-    if (body[field] !== undefined) payload[field] = String(body[field] || '').trim()
+    if (body[field] !== undefined) {
+      if (typeof body[field] === 'object' && body[field] !== null) {
+        payload[field] = body[field]
+      } else {
+        payload[field] = String(body[field] || '').trim()
+      }
+    }
     return payload
   }, {})
 

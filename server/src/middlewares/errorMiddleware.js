@@ -1,5 +1,6 @@
 import logger from '../config/logger.js'
 import env from '../config/env.js'
+import { logToFile } from '../utils/fileLogger.js'
 
 const normalizeError = (err) => {
   if (err.type === 'entity.parse.failed') {
@@ -44,17 +45,19 @@ export default function errorHandler(err, req, res, next) {
   if (res.headersSent) return next(err)
 
   const normalized = normalizeError(err)
-  const log = req.log || logger
   const logPayload = {
-    err,
     requestId: req.id,
     method: req.method,
     path: req.originalUrl,
     statusCode: normalized.status,
+    errorMessage: err.message,
+    errorCode: normalized.code,
   }
 
-  if (normalized.status >= 500) log.error(logPayload, 'Request failed')
-  else log.warn(logPayload, 'Request rejected')
+  // Log error to category file
+  logToFile('errors', normalized.status >= 500 ? 'error' : 'warn', err.message || 'Request failed', logPayload)
+
+
 
   const payload = {
     success: false,

@@ -94,6 +94,7 @@ export default function Profile() {
     }
   }
 
+
   const uploadAvatar = async (file) => {
     setUploading(true)
     setToast({ type: 'success', message: '' })
@@ -215,6 +216,8 @@ export default function Profile() {
                 </div>
               </div>
             </section>
+
+
             <ProfileForm user={user} saving={saving} onSubmit={saveProfile} onPasswordClick={() => setPasswordOpen(true)} />
           </div>
         </div>
