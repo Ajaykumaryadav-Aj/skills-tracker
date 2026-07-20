@@ -87,15 +87,15 @@ const roadmapSchema = new mongoose.Schema(
   },
 )
 
-// Calculate overall progress based on skills
+// Calculate overall progress based on skills completion count
 roadmapSchema.methods.recalculateProgress = function () {
   if (!this.skills || this.skills.length === 0) {
     this.progress = 0
     return 0
   }
 
-  const totalProgress = this.skills.reduce((sum, skill) => sum + (skill.progress || 0), 0)
-  this.progress = Math.round(totalProgress / this.skills.length)
+  const completedCount = this.skills.filter((s) => s.status === 'Completed').length
+  this.progress = Math.round((completedCount / this.skills.length) * 100)
   return this.progress
 }
 
@@ -107,11 +107,11 @@ roadmapSchema.methods.recalculateStatus = function () {
   }
 
   const allCompleted = this.skills.every((s) => s.status === 'Completed')
-  const anyInProgress = this.skills.some((s) => s.status === 'In progress')
+  const anyStarted = this.skills.some((s) => s.status === 'In progress' || (s.progress && s.progress > 0))
 
   if (allCompleted) {
     this.status = 'Completed'
-  } else if (anyInProgress) {
+  } else if (anyStarted) {
     this.status = 'In Progress'
   } else {
     this.status = 'Not Started'

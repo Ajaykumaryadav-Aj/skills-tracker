@@ -4,6 +4,12 @@ import Skill from '../models/Skill.js'
 import User from '../models/User.js'
 import AuditLog from '../models/AuditLog.js'
 import AIHistory from '../models/AIHistory.js'
+import Topic from '../models/Topic.js'
+import SystemSetting from '../models/SystemSetting.js'
+import bcrypt from 'bcryptjs'
+import fs from 'fs'
+import path from 'path'
+import { deleteFile } from '../services/storage.service.js'
 import { getUploadsStorageSize } from '../services/userProfile.service.js'
 import { logAuditEvent } from '../utils/auditLogger.js'
 
@@ -423,3 +429,366 @@ export const getStorageUsageStats = async (req, res, next) => {
     next(err)
   }
 }
+
+export const updateUser = async (req, res, next) => {
+  try {
+    const { name, email, role } = req.body
+    const user = await User.findById(req.params.userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    if (name) user.name = name
+    if (email) user.email = email.toLowerCase().trim()
+    if (role) {
+      if (!['admin', 'user'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' })
+      }
+      user.role = role
+    }
+
+    await user.save()
+    await logAuditEvent(req, req.currentUser.id, 'admin-update-user', { targetUserId: user._id, name, email, role })
+    res.json({ message: 'User updated successfully', user })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const toggleUserStatus = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    if (String(req.currentUser.id) === String(user._id)) {
+      return res.status(400).json({ message: 'Admins cannot deactivate their own accounts' })
+    }
+
+    user.isActive = user.isActive === false ? true : false
+    await user.save()
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-toggle-user-status', { targetUserId: user._id, isActive: user.isActive })
+    res.json({ message: `User status changed to ${user.isActive ? 'active' : 'inactive'}`, user })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const verifyUserEmail = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    user.emailVerified = true
+    user.verifiedAt = user.verifiedAt || new Date()
+    await user.save()
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-verify-user-email', { targetUserId: user._id })
+    res.json({ message: 'User email verified successfully', user })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const resetUserPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' })
+    }
+
+    const user = await User.findById(req.params.userId)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    const hash = await bcrypt.hash(password, 10)
+    user.password = hash
+    await user.save()
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-reset-password', { targetUserId: user._id })
+    res.json({ message: 'User password reset successfully' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getSystemSettings = async (req, res, next) => {
+  try {
+    let settings = await SystemSetting.findOne()
+    if (!settings) {
+      settings = await SystemSetting.create({})
+    }
+    res.json(settings)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const updateSystemSettings = async (req, res, next) => {
+  try {
+    const { aiProvider, uploadLimitsMb, allowedFileTypes, sessionLimitsMinutes } = req.body
+    let settings = await SystemSetting.findOne()
+    if (!settings) {
+      settings = new SystemSetting()
+    }
+
+    if (aiProvider) settings.aiProvider = aiProvider
+    if (uploadLimitsMb !== undefined) settings.uploadLimitsMb = Number(uploadLimitsMb)
+    if (allowedFileTypes) settings.allowedFileTypes = allowedFileTypes
+    if (sessionLimitsMinutes !== undefined) settings.sessionLimitsMinutes = Number(sessionLimitsMinutes)
+
+    await settings.save()
+    await logAuditEvent(req, req.currentUser.id, 'admin-update-settings', { settings })
+    res.json({ message: 'Settings updated successfully', settings })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getSkillsList = async (req, res, next) => {
+  try {
+    const page = getPositiveInteger(req.query.page, 1)
+    const limit = Math.min(getPositiveInteger(req.query.limit, 10), maxPageLimit)
+    const search = String(req.query.search || '').trim()
+
+    const query = { deletedAt: null }
+    if (search) {
+      query.title = new RegExp(escapeRegex(search), 'i')
+    }
+
+    const [skills, total] = await Promise.all([
+      Skill.find(query)
+        .populate('user', 'name email')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Skill.countDocuments(query),
+    ])
+
+    res.json({ skills, pagination: buildPagination({ page, limit, total }) })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteSkillAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const skill = await Skill.findById(id)
+    if (!skill) return res.status(404).json({ message: 'Skill not found' })
+
+    await Promise.all([
+      Skill.deleteOne({ _id: id }),
+      Topic.deleteMany({ skillId: id }),
+      LearningLog.deleteMany({ skill: id }),
+    ])
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-delete-skill', { deletedSkillId: id, title: skill.title })
+    res.json({ message: 'Skill and associated topics/logs deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getTopicsList = async (req, res, next) => {
+  try {
+    const page = getPositiveInteger(req.query.page, 1)
+    const limit = Math.min(getPositiveInteger(req.query.limit, 10), maxPageLimit)
+    const search = String(req.query.search || '').trim()
+
+    const query = { deletedAt: null }
+    if (search) {
+      query.title = new RegExp(escapeRegex(search), 'i')
+    }
+
+    const [topics, total] = await Promise.all([
+      Topic.find(query)
+        .populate('userId', 'name email')
+        .populate('skillId', 'title slug')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Topic.countDocuments(query),
+    ])
+
+    res.json({ topics, pagination: buildPagination({ page, limit, total }) })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteTopicAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const topic = await Topic.findById(id)
+    if (!topic) return res.status(404).json({ message: 'Topic not found' })
+
+    await Promise.all([
+      Topic.deleteOne({ _id: id }),
+      LearningLog.deleteMany({ topic: id }),
+    ])
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-delete-topic', { deletedTopicId: id, title: topic.title })
+    res.json({ message: 'Topic and associated logs deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getLogsList = async (req, res, next) => {
+  try {
+    const page = getPositiveInteger(req.query.page, 1)
+    const limit = Math.min(getPositiveInteger(req.query.limit, 10), maxPageLimit)
+    const search = String(req.query.search || '').trim()
+
+    const query = {}
+    if (search) {
+      query.notes = new RegExp(escapeRegex(search), 'i')
+    }
+
+    const [logs, total] = await Promise.all([
+      LearningLog.find(query)
+        .populate('user', 'name email')
+        .populate('skill', 'title slug')
+        .populate('topic', 'title')
+        .sort({ date: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      LearningLog.countDocuments(query),
+    ])
+
+    res.json({ logs, pagination: buildPagination({ page, limit, total }) })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteLogAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const log = await LearningLog.findById(id)
+    if (!log) return res.status(404).json({ message: 'Learning log not found' })
+
+    await LearningLog.deleteOne({ _id: id })
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-delete-log', { deletedLogId: id })
+    res.json({ message: 'Learning log deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getUploadedFilesList = async (req, res, next) => {
+  try {
+    const avatars = await User.find({ 'avatar.url': { $ne: '' } }).select('name email avatar').lean()
+    const skillsWithFiles = await Skill.find({ 'topics.resources.file.url': { $exists: true } }).select('title user topics.title topics.resources').lean()
+
+    const files = []
+
+    avatars.forEach(user => {
+      files.push({
+        id: `avatar-${user._id}`,
+        type: 'Avatar',
+        url: user.avatar.url,
+        publicId: user.avatar.publicId || user.avatar.public_id,
+        filename: user.avatar.originalFilename || 'avatar.jpg',
+        mimetype: user.avatar.mimetype || 'image/jpeg',
+        size: user.avatar.size || 0,
+        owner: { name: user.name, email: user.email },
+        refId: user._id,
+        refModel: 'User'
+      })
+    })
+
+    skillsWithFiles.forEach(skill => {
+      ;(skill.topics || []).forEach(topic => {
+        ;(topic.resources || []).forEach(res => {
+          if (res.file && res.file.url) {
+            files.push({
+              id: res._id || `res-${Math.random()}`,
+              type: res.type || 'Attachment',
+              url: res.file.url,
+              publicId: res.file.publicId || res.file.public_id,
+              filename: res.file.originalName || res.file.originalFilename || 'attachment.pdf',
+              mimetype: res.file.mimetype || 'application/pdf',
+              size: res.file.size || 0,
+              owner: { name: 'Workspace User' },
+              refId: skill._id,
+              refModel: 'Skill',
+              topicTitle: topic.title,
+              skillTitle: skill.title
+            })
+          }
+        })
+      })
+    })
+
+    res.json({ files })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const deleteFileAdmin = async (req, res, next) => {
+  try {
+    const { publicId, refId, refModel } = req.body
+    if (!publicId) return res.status(400).json({ message: 'publicId is required' })
+
+    await deleteFile(publicId).catch(() => {})
+
+    if (refModel === 'User') {
+      const user = await User.findById(refId)
+      if (user) {
+        user.avatar = undefined
+        await user.save()
+      }
+    } else if (refModel === 'Skill') {
+      const skill = await Skill.findById(refId)
+      if (skill) {
+        let updated = false
+        ;(skill.topics || []).forEach(topic => {
+          topic.resources = (topic.resources || []).filter(res => {
+            if (res.file && (res.file.publicId === publicId || res.file.public_id === publicId)) {
+              updated = true
+              return false
+            }
+            return true
+          })
+        })
+        if (updated) {
+          await skill.save()
+        }
+      }
+    }
+
+    await logAuditEvent(req, req.currentUser.id, 'admin-delete-file', { publicId })
+    res.json({ message: 'File and references deleted successfully' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const getLogFileContent = async (req, res, next) => {
+  try {
+    const { category } = req.query
+    if (!['requests', 'errors', 'auth', 'ai', 'uploads'].includes(category)) {
+      return res.status(400).json({ message: 'Invalid log category' })
+    }
+
+    const logsDir = path.join(process.cwd(), 'logs')
+    const filePath = path.join(logsDir, `${category}.log`)
+
+    if (!fs.existsSync(filePath)) {
+      return res.json({ content: '' })
+    }
+
+    // Read last 100 lines
+    const fileContent = fs.readFileSync(filePath, 'utf8')
+    const lines = fileContent.trim().split('\n').slice(-100).reverse()
+    res.json({ content: lines.join('\n') })
+  } catch (err) {
+    next(err)
+  }
+}
+
+

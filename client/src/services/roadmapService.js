@@ -41,3 +41,11 @@ export const addTopicToSkill = (roadmapId, skillId, data) => api.post(`/roadmaps
 
 // Get roadmap stats
 export const getRoadmapStats = () => api.get('/roadmaps/stats')
+
+// Reorder skills in a roadmap
+export const reorderRoadmapSkills = (roadmapId, skillIds) => api.put(`/roadmaps/${roadmapId}/skills/reorder`, { skillIds })
+
+// Generate a full structured roadmap via AI
+// Uses a 3-minute timeout because Gemini needs time to produce a detailed multi-phase roadmap
+export const generateStructuredRoadmap = (goal, signal) =>
+  api.post('/ai/generate-roadmap', { goal }, { timeout: 180000, signal })

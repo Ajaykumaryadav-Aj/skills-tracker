@@ -1,7 +1,7 @@
 export const cn = (...classes) => classes.filter(Boolean).join(' ')
 
 export const ui = {
-  panel: 'rounded-panel border border-line bg-surface/95 p-5 shadow-card backdrop-blur sm:p-6',
+  panel: 'p-0 sm:p-6 bg-transparent sm:bg-surface/95 border-0 sm:border sm:border-line rounded-none sm:rounded-panel shadow-none sm:shadow-card backdrop-blur-none sm:backdrop-blur',
   card: 'rounded-panel border border-line bg-surface/95 shadow-card backdrop-blur transition duration-200 ease-out hover:-translate-y-0.5 hover:border-line-strong hover:shadow-card-hover focus-within:border-emerald-brand/40',
   button: {
     base: 'inline-flex min-h-10 items-center justify-center gap-2 rounded-card border px-4 py-2 text-sm font-extrabold leading-none shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-brand/20 disabled:pointer-events-none disabled:translate-y-0 disabled:opacity-60',

@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
-import { ui } from '../utils/tw'
+import { cn, ui } from '../utils/tw'
 
-export default function Modal({ open, title, children, onClose }) {
+export default function Modal({ open, title, children, onClose, maxWidth = 'max-w-2xl' }) {
   const titleId = useId()
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -46,7 +46,7 @@ export default function Modal({ open, title, children, onClose }) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex="-1"
-        className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-panel border border-line bg-white p-5 shadow-card-hover outline-none animate-[modal-in_220ms_cubic-bezier(0.16,1,0.3,1)] sm:p-6"
+        className={cn("max-h-[90vh] w-full overflow-auto rounded-panel border border-line bg-white p-5 shadow-card-hover outline-none animate-[modal-in_220ms_cubic-bezier(0.16,1,0.3,1)] sm:p-6", maxWidth)}
       >
         <div className="-mx-5 -mt-5 flex items-center justify-between gap-4 border-b border-line bg-surface-raised/80 px-5 py-4 sm:-mx-6 sm:-mt-6 sm:px-6">
           <h2 id={titleId} className="text-xl font-black text-ink">{title}</h2>

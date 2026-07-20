@@ -300,3 +300,45 @@ export const getRoadmapStats = async (req, res, next) => {
     next(err)
   }
 }
+
+// Reorder skills in roadmap
+export const reorderRoadmapSkills = async (req, res, next) => {
+  try {
+    const { roadmapId } = req.params
+    const { skillIds } = req.body
+
+    const roadmap = await Roadmap.findOne({ _id: roadmapId, user: req.user.id })
+    if (!roadmap) {
+      return res.status(404).json({ message: 'Roadmap not found' })
+    }
+
+    if (!Array.isArray(skillIds)) {
+      return res.status(400).json({ message: 'skillIds must be an array' })
+    }
+
+    // Reorder based on skillIds
+    const skillMap = new Map(roadmap.skills.map((s) => [s._id.toString(), s]))
+    const newSkills = []
+
+    for (const id of skillIds) {
+      const skill = skillMap.get(id)
+      if (skill) {
+        newSkills.push(skill)
+        skillMap.delete(id)
+      }
+    }
+
+    // Add remaining skills
+    for (const skill of skillMap.values()) {
+      newSkills.push(skill)
+    }
+
+    roadmap.skills = newSkills
+    await roadmap.save()
+
+    res.json({ roadmap })
+  } catch (err) {
+    next(err)
+  }
+}
+

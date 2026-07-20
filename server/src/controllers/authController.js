@@ -12,6 +12,7 @@ import { successResponse } from '../utils/apiResponse.js'
 import httpError from '../utils/httpError.js'
 import { hashToken } from '../utils/token.js'
 import { logAuditEvent } from '../utils/auditLogger.js'
+import { logToFile } from '../utils/fileLogger.js'
 
 const createToken = (user) => {
   const payload = { id: user._id, email: user.email, role: user.role || 'user' }
@@ -66,7 +67,9 @@ export const register = async (req, res, next) => {
     user.emailVerified = false
     await user.save()
 
+
     await logAuditEvent(req, user._id, 'auth-register-initiated', { email: user.email })
+    logToFile('auth', 'info', `Registration initiated for ${email}`, { name, email })
 
     const otp = existingUser
       ? await resendOTP({ userId: user._id, purpose: OTP_PURPOSES.REGISTER })
@@ -112,7 +115,9 @@ export const verifyRegistrationOTP = async (req, res, next) => {
     user.role = getServerAssignedRole(user.email)
     await user.save()
 
+
     await logAuditEvent(req, user._id, 'auth-register-completed', { email: user.email })
+    logToFile('auth', 'info', `Registration verified and completed for ${email}`, { email })
 
     return issueAuthResponse(res, user, 'Email verified successfully.')
   } catch (err) {
@@ -148,21 +153,49 @@ export const resendRegistrationOTP = async (req, res, next) => {
 }
 
 export const login = async (req, res, next) => {
+  const email = normalizeEmail(req.body.email)
   try {
-    const email = normalizeEmail(req.body.email)
+    logToFile('auth', 'info', `Login attempt initiated for ${email}`, { email })
+
     const user = await User.findOne({ email }).select('+password')
+    logToFile('auth', 'info', `User database lookup completed for ${email}. Found: ${Boolean(user)}`, { email, found: Boolean(user) })
+
     if (!user) {
-      await logAuditEvent(req, null, 'auth-login-failed', { email })
-      throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+      await logAuditEvent(req, null, 'auth-login-failed', { email, reason: 'user-not-found' })
+      logToFile('auth', 'warn', `Login failed (user not found) for ${email}`, { email })
+      await notifyAdmins(
+        'Failed Login Attempt',
+        `A failed login attempt (email not found) was recorded for email: ${email}`,
+        'System Alert',
+        { email }
+      ).catch(() => {})
+      throw httpError(401, 'Invalid credentials', 'INVALID_CREDENTIALS')
     }
 
     const match = await bcrypt.compare(req.body.password, user.password)
+    logToFile('auth', 'info', `Password comparison verification completed for ${email}. Match: ${match}`, { email })
+
     if (!match) {
-      await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email })
-      throw httpError(400, 'Invalid credentials', 'INVALID_CREDENTIALS')
+      await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email, reason: 'invalid-password' })
+      logToFile('auth', 'warn', `Login failed (invalid password) for ${email}`, { email })
+      await notifyAdmins(
+        'Failed Login Attempt',
+        `A failed login attempt (incorrect password) was recorded for user: ${email}`,
+        'System Alert',
+        { email, userId: user._id }
+      ).catch(() => {})
+      throw httpError(401, 'Invalid credentials', 'INVALID_CREDENTIALS')
+    }
+
+    if (user.isActive === false) {
+      await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email, reason: 'account-deactivated' })
+      logToFile('auth', 'warn', `Login failed (account deactivated) for ${email}`, { email })
+      throw httpError(403, 'Your account has been deactivated. Please contact support.', 'ACCOUNT_DEACTIVATED')
     }
 
     if (!user.emailVerified) {
+      await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email, reason: 'email-unverified' })
+      logToFile('auth', 'warn', `Login failed (email unverified) for ${email}`, { email })
       throw httpError(403, 'Please verify your email before logging in.', 'EMAIL_NOT_VERIFIED')
     }
 
@@ -174,9 +207,12 @@ export const login = async (req, res, next) => {
     await user.save()
 
     await logAuditEvent(req, user._id, 'auth-login-success', { email: user.email, role: user.role })
+    logToFile('auth', 'info', `Login successful for ${email}. Emitting 200 response.`, { email, role: user.role })
 
     return issueAuthResponse(res, user, 'Logged in successfully.')
   } catch (err) {
+    const statusCode = err.status || err.statusCode || 500
+    logToFile('auth', 'error', `Login exception for ${email}: ${err.message}`, { email, statusCode, errorCode: err.code })
     next(err)
   }
 }
@@ -228,6 +264,7 @@ export const resetPassword = async (req, res, next) => {
       OTP.deleteOne({ _id: otpRecord._id }),
     ])
 
+
     await logAuditEvent(req, user._id, 'auth-password-reset', { email: user.email })
 
     return successResponse(res, 'Password reset successfully.', { email: user.email })
@@ -249,6 +286,7 @@ export const logout = async (req, res, next) => {
 
     if (decoded?.id) {
       await logAuditEvent(req, decoded.id, 'auth-logout', { email: decoded.email })
+      logToFile('auth', 'info', `Logout successful for ${decoded.email}`, { email: decoded.email, userId: decoded.id })
     }
 
     return successResponse(res, 'Logged out successfully.')

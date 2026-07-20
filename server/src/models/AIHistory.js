@@ -1,6 +1,18 @@
 import mongoose from 'mongoose'
 
-export const AI_HISTORY_TYPES = ['roadmap', 'planner', 'notes-summary', 'quiz', 'interview', 'weak-topics', 'recommendations', 'chat']
+export const AI_HISTORY_TYPES = [
+  'roadmap',
+  'structured-roadmap',
+  'planner',
+  'notes-summary',
+  'interview',
+  'weak-topics',
+  'recommendations',
+  'chat',
+  'debug',
+  'notes-generator',
+  'resources'
+]
 
 const aiHistorySchema = new mongoose.Schema(
   {

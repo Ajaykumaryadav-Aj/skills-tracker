@@ -220,9 +220,7 @@ const meaningfulLength = (value) => String(value || '').trim().length
 const outputLooksThin = (type, output) => {
   if (!output || typeof output !== 'object') return true
   if (type === 'notes-summary') return meaningfulLength(output.summary) < 120 || (output.keyPoints || []).some((point) => meaningfulLength(point) < 25)
-  if (type === 'roadmap') return (output.roadmap || []).some((item) => meaningfulLength(item.focus) < 30 || (item.tasks || []).some((task) => meaningfulLength(task) < 25))
   if (type === 'planner') return (output.dailySchedule || []).some((item) => meaningfulLength(item.activity) < 30)
-  if (type === 'quiz') return (output.questions || []).some((item) => meaningfulLength(item.explanation) < 50 || (item.options || []).some((option) => meaningfulLength(option) < 15))
   if (type === 'interview') {
     const groups = output.questions || {}
     return Object.values(groups).flat().some((item) => meaningfulLength(item.answer) < 80)
@@ -258,29 +256,307 @@ const generateStructured = async ({ userId, type, payload, prompt, schemaHint, f
   return value
 }
 
-export const generateRoadmap = async (userId, payload) => {
-  const prompt = textPrompt('Create a practical learning roadmap with milestones, weekly focus, tasks, and estimated completion time. Return JSON.', payload)
+export const generateChatResponse = async (userId, { message, history = [] }) => {
+  const payload = { message, history: (history || []).slice(-6) }
+  const prompt = textPrompt(`You are an expert conversational study companion. Answer this programming or learning query: "${message}". History context: ${JSON.stringify(payload.history)}`, payload)
   return generateStructured({
     userId,
-    type: 'roadmap',
+    type: 'chat',
     payload,
     prompt,
-    schemaHint: 'Schema: {roadmap:[{week:number,title:string,focus:string,tasks:string[]}], milestones:string[], estimatedCompletionTime:string}. Create 6-8 roadmap items when possible. Each focus must be 2-3 useful sentences. Each task must explain the action and expected result.',
-    fallback: () => {
-      const daily = Number(payload.dailyStudyHours || 1)
-      const weeks = daily >= 2 ? 6 : 10
-      return {
-        roadmap: [
-          { week: 1, title: 'Foundation', focus: `Build a clear base in ${payload.skill || 'the skill'} before moving into harder practice.`, tasks: ['List the prerequisites and mark which ones need a quick refresh before continuing', 'Learn the core vocabulary and write one example for each important term', 'Build one tiny example that proves you understand the first concept'] },
-          { week: 2, title: 'Core Practice', focus: 'Turn the fundamentals into daily hands-on practice.', tasks: ['Complete guided exercises and write down why each solution works', 'Document weak points after every practice block', 'Create flashcards for concepts that are easy to forget'] },
-          { week: 3, title: 'Project Loop', focus: 'Apply concepts in a small but complete project.', tasks: ['Build one practical project that uses the main concepts together', 'Review mistakes and convert them into revision notes', 'Refactor the project once to improve structure and readability'] },
-          { week: weeks, title: 'Target Level Check', focus: `Validate readiness for ${payload.targetLevel || 'the target level'} with review and assessment.`, tasks: ['Take a mock assessment and mark every uncertain answer', 'Revise the weakest topics using spaced repetition', 'Publish or document the final project as proof of learning'] },
-        ],
-        milestones: ['Prerequisites covered with short notes, examples, and a checklist of unclear areas', 'First practical project completed, reviewed, and improved once after feedback', 'Revision cycle started for weak topics using recall before rereading notes', `${payload.targetLevel || 'Target level'} readiness review completed with a mock assessment and project proof`],
-        estimatedCompletionTime: `${weeks} weeks at ${daily} hour${daily === 1 ? '' : 's'} per day, assuming consistent practice and one weekly review session.`,
-      }
-    },
+    schemaHint: 'Schema: { reply: string }. Return a single detailed markdown-formatted reply in the "reply" key.',
+    fallback: () => ({
+      reply: `I received your message about: "${message}". Let me know if you need code debugging, notes, or study planners!`,
+    }),
   })
+}
+
+export const debugCode = async (userId, { code, language = 'JavaScript' }) => {
+  const payload = { code, language }
+  const prompt = textPrompt(`Analyze the following ${language} code for bugs: "${code}". Explain the issue, provide the corrected code, and list best practices.`, payload)
+  return generateStructured({
+    userId,
+    type: 'debug',
+    payload,
+    prompt,
+    schemaHint: 'Schema: { hasBug: boolean, explanation: string, correctedCode: string, bestPractices: string[] }. Explanation must be clear. bestPractices must be a list of 2-4 items.',
+    fallback: () => ({
+      hasBug: false,
+      explanation: 'No major syntax issues detected in this code snippet.',
+      correctedCode: code,
+      bestPractices: [
+        'Always validate user inputs and inputs to your functions.',
+        'Use strict equality checking (=== in JS).',
+        'Add proper try-catch error handling around asynchronous calls.',
+      ],
+    }),
+  })
+}
+
+export const generateNotes = async (userId, { topic, type, level }) => {
+  const payload = { topic, type, level }
+  const prompt = textPrompt(`Generate comprehensive study notes on the topic: "${topic}". Note format type: "${type}" (Detailed Notes, Revision Notes, or Concise Summary). Complexity level: "${level}" (Simple Language (ELIF5) or Technical / Academic).`, payload)
+  return generateStructured({
+    userId,
+    type: 'notes-generator',
+    payload,
+    prompt,
+    schemaHint: 'Schema: { title: string, content: string, keyTakeaways: string[], quickReview: string }. content must be detailed markdown.',
+    fallback: () => ({
+      title: topic,
+      content: `### Study Guide for ${topic}\n\nHere is a simple explanation of ${topic} tailored for a ${level} audience.\n\n- Focus on core principles.\n- Build a working example.\n- Practice without referencing notes.`,
+      keyTakeaways: [`Understand the fundamental definition of ${topic}`, 'Connect the concept to a real-world use case.'],
+      quickReview: 'Create one mini project to test your implementation and reinforce learning.',
+    }),
+  })
+}
+
+export const suggestResources = async (userId, { topic }) => {
+  const payload = { topic }
+  const prompt = textPrompt(`Find highly-rated learning resources for the topic: "${topic}". Suggest official documentation, YouTube channels/tutorials, GitHub repositories, articles/blogs, and practice websites.`, payload)
+  return generateStructured({
+    userId,
+    type: 'resources',
+    payload,
+    prompt,
+    schemaHint: 'Schema: { officialDocs: [{title:string,url:string,description:string}], youtube: [{title:string,url:string,description:string}], github: [{title:string,url:string,description:string}], articles: [{title:string,url:string,description:string}], practice: [{title:string,url:string,description:string}] }. Provide real and useful links with helpful descriptions.',
+    fallback: () => ({
+      officialDocs: [
+        { title: `${topic} Official Reference`, url: `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(topic)}`, description: 'MDN Web Docs or standard documentation search.' },
+      ],
+      youtube: [
+        { title: `${topic} Tutorials`, url: 'https://youtube.com', description: 'Search on YouTube for top crash courses and tutorials.' },
+      ],
+      github: [
+        { title: `Awesome ${topic} List`, url: 'https://github.com', description: 'Search GitHub for repositories with list of curated resources.' },
+      ],
+      articles: [
+        { title: `Introduction to ${topic}`, url: 'https://dev.to', description: 'Search dev.to for introductory and community articles.' },
+      ],
+      practice: [
+        { title: `Practice ${topic}`, url: 'https://freecodecamp.org', description: 'Complete hands-on coding challenges to test your skills.' },
+      ],
+    }),
+  })
+}
+
+export const generateStructuredRoadmap = async (userId, { goal }) => {
+  const cacheKey = makeCacheKey(userId, 'structured-roadmap', { goal })
+  const cached = fromCache(cacheKey)
+  if (cached) return { ...cached, cached: true }
+
+  const schemaHint = `You are an expert learning path architect. Return ONLY valid JSON — no markdown, no text outside JSON.
+Schema (follow EXACTLY):
+{
+  "title": string,
+  "description": string,
+  "category": "Frontend"|"Backend"|"Full Stack"|"Mobile"|"DevOps"|"Data Science"|"Other",
+  "icon": string (1 relevant emoji),
+  "difficulty": "Beginner"|"Intermediate"|"Advanced",
+  "estimatedDuration": string (e.g. "12 weeks"),
+  "estimatedHours": number,
+  "weeklyStudyPlan": string[],
+  "portfolioProjects": [{"title": string, "description": string, "skills": string[]}],
+  "resumeProjects": string[],
+  "interviewChecklist": string[],
+  "revisionChecklist": string[],
+  "milestones": [{"phase": string, "title": string, "description": string}],
+  "skills": [
+    {
+      "title": string,
+      "description": string,
+      "level": "Beginner"|"Intermediate"|"Advanced",
+      "estimatedHours": number,
+      "phase": string,
+      "whyLearn": string,
+      "commonMistakes": string[],
+      "practiceTask": string,
+      "miniAssignment": string,
+      "interviewQuestions": string[],
+      "topics": [
+        {
+          "title": string,
+          "description": string,
+          "subtopics": [{"title": string, "description": string}],
+          "resources": [
+            {
+              "title": string,
+              "url": string,
+              "type": "Documentation"|"YouTube"|"Article"|"Practice"|"Course",
+              "description": string
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+Rules:
+- Include 3-5 phases with 2-4 skills each (8-14 skills total).
+- Each skill must have 2-4 topics with 2-3 subtopics and 3-5 resources.
+- Resources must have real, working URLs (official docs, YouTube channels, practice sites).
+- interviewChecklist must have 8-12 items. revisionChecklist must have 6-10 items.
+- portfolioProjects must have 3-5 projects. resumeProjects must have 3-5 bullet points.
+- weeklyStudyPlan must have 6-10 items describing what to do each week.
+- milestones must have one entry per phase.
+- All strings must be complete sentences, not one-word labels.
+- Do NOT truncate or cut the JSON short. Return the complete object.`
+
+  const prompt = `Create a complete, production-level learning roadmap for: "${goal}".
+
+This roadmap should be similar in quality to roadmap.sh, Coursera learning paths, and Microsoft Learn.
+Include everything a learner needs: phases, modules, topics, subtopics, resources, interview prep, portfolio projects, weekly study plan, milestones, and revision checklist.
+
+The user's goal: "${goal}"
+
+Return the complete JSON object following the schema exactly. Do not abbreviate any field.`
+
+  const attemptGenerate = async () => {
+    const result = await generateWithProvider({ prompt, schemaHint, fallback: () => buildRoadmapFallback(goal), maxOutputTokens: 12000 })
+    return result
+  }
+
+  let result = await attemptGenerate()
+
+  // Retry once if JSON is invalid or structure is thin
+  if (result.fallback || !result.output?.skills?.length) {
+    result = await attemptGenerate()
+  }
+
+  const value = {
+    data: result.output,
+    provider: result.provider,
+    model: result.model,
+    fallback: result.fallback,
+    providerError: result.error || '',
+  }
+
+  await persistGeneration({
+    userId,
+    type: 'structured-roadmap',
+    prompt,
+    response: result.output,
+    provider: result.provider,
+    model: result.model,
+    cacheKey,
+  })
+
+  saveCache(cacheKey, value)
+  return value
+}
+
+const buildRoadmapFallback = (goal) => {
+  const g = String(goal || 'Programming').trim()
+  let category = 'Other'
+  let icon = '🚀'
+  const lower = g.toLowerCase()
+  if (/react|vue|angular|frontend|css|html|next/.test(lower)) { category = 'Frontend'; icon = '🎨' }
+  else if (/node|express|backend|sql|postgres|mongo|api|django|spring/.test(lower)) { category = 'Backend'; icon = '⚙️' }
+  else if (/docker|kubernetes|devops|ci\/cd|jenkins|terraform|ansible/.test(lower)) { category = 'DevOps'; icon = '🐳' }
+  else if (/mern|fullstack|full.?stack/.test(lower)) { category = 'Full Stack'; icon = '🥞' }
+  else if (/python|data.?science|machine.?learning|ml|ai|pandas|numpy|tensorflow/.test(lower)) { category = 'Data Science'; icon = '🐍' }
+  else if (/swift|android|kotlin|react.?native|flutter|mobile/.test(lower)) { category = 'Mobile'; icon = '📱' }
+
+  return {
+    title: `${g} Learning Path`,
+    description: `A structured, production-level learning path for mastering ${g}. This roadmap covers everything from fundamentals to advanced concepts with hands-on projects and interview preparation.`,
+    category,
+    icon,
+    difficulty: 'Intermediate',
+    estimatedDuration: '12 weeks',
+    estimatedHours: 120,
+    weeklyStudyPlan: [
+      'Week 1-2: Study fundamentals, set up the environment, and build your first small project.',
+      'Week 3-4: Deep dive into core concepts with daily hands-on exercises.',
+      'Week 5-6: Work on intermediate topics and integrate multiple concepts in mini projects.',
+      'Week 7-8: Tackle advanced topics and start building a portfolio project.',
+      'Week 9-10: Complete the portfolio project, refine, and document it.',
+      'Week 11: Revise all weak areas using spaced repetition.',
+      'Week 12: Interview preparation, mock projects, and final review.',
+    ],
+    portfolioProjects: [
+      { title: `${g} Beginner Project`, description: `A beginner-level project that demonstrates your understanding of ${g} fundamentals.`, skills: ['Core concepts', 'Basic implementation'] },
+      { title: `${g} Intermediate App`, description: `An intermediate project showcasing your ability to build real features and integrate tools.`, skills: ['API integration', 'State management', 'Testing'] },
+      { title: `${g} Full-Stack Capstone`, description: `A production-ready capstone project demonstrating advanced ${g} skills suitable for your resume.`, skills: ['Architecture', 'Security', 'Deployment'] },
+    ],
+    resumeProjects: [
+      `Built a full-stack ${g} application with authentication, REST API, and deployment.`,
+      `Implemented a real-time feature using WebSockets and optimized for performance.`,
+      `Designed and documented a scalable architecture for a ${g} project.`,
+    ],
+    interviewChecklist: [
+      'Understand core concepts and be ready to explain them without jargon.',
+      'Practice common algorithm and data structure problems relevant to the role.',
+      'Prepare 3-5 project stories using the STAR format.',
+      'Review system design concepts at a high level.',
+      'Know the trade-offs of key technology choices.',
+      'Be ready to debug live code under pressure.',
+      'Prepare thoughtful questions for the interviewer.',
+      'Review your portfolio projects and be able to explain every decision.',
+    ],
+    revisionChecklist: [
+      'Review all phase 1 fundamentals with active recall.',
+      'Practice core exercises without looking at solutions.',
+      'Re-do the most challenging mini assignments from scratch.',
+      'Watch one revision video for each major topic.',
+      'Complete a timed mock interview or coding challenge.',
+      'Update your notes with new insights and correct any mistakes.',
+    ],
+    milestones: [
+      { phase: 'Phase 1', title: 'Foundations Complete', description: `You can explain the core concepts of ${g} and have built your first working project.` },
+      { phase: 'Phase 2', title: 'Core Skills Mastered', description: 'You can build features independently and understand how components connect.' },
+      { phase: 'Phase 3', title: 'Advanced Topics Covered', description: 'You understand advanced patterns and can make architectural decisions.' },
+    ],
+    skills: [
+      {
+        title: `Introduction to ${g}`,
+        description: `Build a strong foundation in ${g} covering setup, syntax, and core principles.`,
+        level: 'Beginner',
+        estimatedHours: 20,
+        phase: 'Phase 1: Foundations',
+        whyLearn: `This module establishes the mental model you need for everything that follows. Skipping fundamentals causes confusion later.`,
+        commonMistakes: ['Skipping environment setup', 'Copy-pasting without understanding', 'Not building anything small first'],
+        practiceTask: `Build a simple "Hello World" project that uses three different core features of ${g}.`,
+        miniAssignment: `Create a mini project that solves a real problem using only the fundamental concepts covered in this module.`,
+        interviewQuestions: [`What is ${g} and what problems does it solve?`, `How does ${g} compare to similar technologies?`, 'What are the prerequisites for learning this technology?'],
+        topics: [
+          { title: 'Core Concepts', description: `The fundamental ideas that define how ${g} works.`, subtopics: [{ title: 'History and Ecosystem', description: `Where ${g} came from and what tools surround it.` }, { title: 'Key Principles', description: `The design principles that guide how ${g} is used.` }], resources: [{ title: 'Official Documentation', url: 'https://developer.mozilla.org', type: 'Documentation', description: 'The authoritative reference for the technology.' }, { title: 'Traversy Media', url: 'https://youtube.com/@TraversyMedia', type: 'YouTube', description: 'Practical video tutorials for beginners.' }, { title: 'freeCodeCamp', url: 'https://freecodecamp.org', type: 'Practice', description: 'Free structured curriculum with exercises.' }] },
+          { title: 'Environment Setup', description: 'Configure your development environment for efficient work.', subtopics: [{ title: 'Installation', description: 'Installing and configuring all required tools.' }, { title: 'Editor Setup', description: 'Configure VS Code with useful extensions.' }], resources: [{ title: 'VS Code', url: 'https://code.visualstudio.com', type: 'Documentation', description: 'The most popular code editor with rich extension support.' }] },
+        ],
+      },
+      {
+        title: `Core ${g} Development`,
+        description: 'Apply core concepts to build real features and solve practical problems.',
+        level: 'Intermediate',
+        estimatedHours: 30,
+        phase: 'Phase 2: Core Skills',
+        whyLearn: 'This is where you move from understanding concepts to building real functionality that users interact with.',
+        commonMistakes: ['Not testing your code', 'Ignoring error handling', 'Over-engineering simple solutions'],
+        practiceTask: 'Build a feature from scratch using the concepts in this module, then refactor it after review.',
+        miniAssignment: 'Create a working mini-app that integrates at least three concepts from this module.',
+        interviewQuestions: ['How do you structure a project using these concepts?', 'What error handling patterns do you use?', 'How do you test this kind of code?'],
+        topics: [
+          { title: 'Building Features', description: 'Implement real application features using core patterns.', subtopics: [{ title: 'Data Flow', description: 'How data moves through the application.' }, { title: 'Error Handling', description: 'Catching and recovering from failures gracefully.' }], resources: [{ title: 'Official Guides', url: 'https://developer.mozilla.org', type: 'Documentation', description: 'Official guides for practical implementation.' }, { title: 'The Net Ninja', url: 'https://youtube.com/@NetNinja', type: 'YouTube', description: 'Clear, practical tutorials with real examples.' }, { title: 'Frontend Mentor', url: 'https://frontendmentor.io', type: 'Practice', description: 'Realistic project challenges with design files.' }] },
+        ],
+      },
+      {
+        title: `Advanced ${g} & Production`,
+        description: 'Master advanced patterns, performance optimization, and deployment.',
+        level: 'Advanced',
+        estimatedHours: 40,
+        phase: 'Phase 3: Advanced',
+        whyLearn: 'Production applications require performance, security, and scalability knowledge that goes beyond basic tutorials.',
+        commonMistakes: ['Premature optimization', 'Not considering security', 'Skipping monitoring and logging'],
+        practiceTask: 'Profile and optimize an existing project for performance, then deploy it to a production environment.',
+        miniAssignment: 'Build and deploy a production-ready application with authentication, error monitoring, and CI/CD.',
+        interviewQuestions: ['How do you approach performance optimization?', 'What security concerns do you consider?', 'How do you deploy and monitor a production application?'],
+        topics: [
+          { title: 'Performance Optimization', description: 'Identify and fix performance bottlenecks in production applications.', subtopics: [{ title: 'Profiling', description: 'Using profiling tools to find slow code paths.' }, { title: 'Caching', description: 'Implementing caching strategies to reduce load.' }], resources: [{ title: 'Web Dev for Beginners', url: 'https://github.com/microsoft/Web-Dev-For-Beginners', type: 'Course', description: 'Free Microsoft course covering web fundamentals.' }, { title: 'Fireship', url: 'https://youtube.com/@Fireship', type: 'YouTube', description: 'High-quality short videos on advanced topics.' }] },
+          { title: 'Deployment & CI/CD', description: 'Deploy applications reliably using modern DevOps practices.', subtopics: [{ title: 'Docker', description: 'Containerizing applications for consistent deployment.' }, { title: 'GitHub Actions', description: 'Automating build, test, and deploy pipelines.' }], resources: [{ title: 'Docker Docs', url: 'https://docs.docker.com', type: 'Documentation', description: 'Official Docker documentation and tutorials.' }, { title: 'Render', url: 'https://render.com', type: 'Practice', description: 'Free deployment platform for full-stack apps.' }] },
+        ],
+      },
+    ],
+  }
 }
 
 export const generateStudyPlanner = async (userId, payload) => {
@@ -350,25 +626,7 @@ export const summarizeNotes = async (userId, payload) => {
   })
 }
 
-export const generateQuiz = async (userId, payload) => {
-  const prompt = textPrompt('Generate MCQs with correct answers and explanations. Return JSON.', payload)
-  return generateStructured({
-    userId,
-    type: 'quiz',
-    payload,
-    prompt,
-    schemaHint: 'Schema: {questions:[{question:string,options:string[],correctAnswer:string,explanation:string,difficulty:string}]}. Questions must test understanding, not trivia. Explanations must teach why the answer is correct and why at least one tempting option is wrong.',
-    fallback: () => ({
-      questions: Array.from({ length: Number(payload.count || 5) }, (_, index) => ({
-        question: `Which statement best checks your understanding of ${payload.topic || payload.skill || 'this topic'}? (${index + 1})`,
-        options: ['It connects the core idea with a practical example.', 'It memorizes a definition without applying it.', 'It skips edge cases and feedback.', 'It removes the topic from real project context.'],
-        correctAnswer: 'It connects the core idea with a practical example.',
-        explanation: 'The strongest understanding comes from explaining the concept and applying it in a realistic situation, because that reveals gaps faster than memorization.',
-        difficulty: payload.difficulty || 'Beginner',
-      })),
-    }),
-  })
-}
+
 
 export const generateInterviewQuestions = async (userId, payload) => {
   const prompt = textPrompt('Generate interview questions with model answers. Return JSON.', payload)

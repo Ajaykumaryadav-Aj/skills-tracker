@@ -49,3 +49,33 @@ export const uploadKnowledgeAttachment = multer({
   fileFilter: knowledgeFileFilter,
   limits: { fileSize: 10 * 1024 * 1024, files: 1 }, // General limit 10MB (images strictly limited to 5MB in controller)
 }).single('file')
+
+const chatMimeTypes = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+])
+
+const chatFileFilter = (req, file, cb) => {
+  const extension = path.extname(file.originalname).toLowerCase().replace('.', '')
+  const allowedExtensions = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'])
+  if (!chatMimeTypes.has(file.mimetype) || !allowedExtensions.has(extension)) {
+    return cb(httpError(400, 'Attachment must be a PDF, image (jpg, jpeg, png, webp, gif), or document (doc, docx, xls, xlsx, ppt, pptx, txt)', 'INVALID_ATTACHMENT_TYPE'))
+  }
+  cb(null, true)
+}
+
+export const uploadChatAttachment = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: chatFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 }, // Max 10MB
+}).single('file')

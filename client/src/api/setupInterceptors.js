@@ -5,11 +5,14 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response && err.response.status === 401) {
-      // clear token and redirect to login
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      delete api.defaults.headers.common.Authorization
-      window.location.href = '/login'
+      const isLoginRequest = err.config?.url?.includes('/auth/login')
+      if (!isLoginRequest) {
+        // clear token and redirect to login
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        delete api.defaults.headers.common.Authorization
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

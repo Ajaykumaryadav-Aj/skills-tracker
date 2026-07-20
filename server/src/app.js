@@ -97,6 +97,30 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
   maxAge: '7d',
 }))
 
+import { logToFile } from './utils/fileLogger.js'
+
+// Track average API latencies
+const recentLatencies = []
+app.use((req, res, next) => {
+  const start = process.hrtime()
+  res.on('finish', () => {
+    const diff = process.hrtime(start)
+    const durationMs = (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2)
+    recentLatencies.push(Number(durationMs))
+    if (recentLatencies.length > 100) recentLatencies.shift()
+
+    // Log request to requests.log
+    logToFile('requests', 'info', `${req.method} ${req.originalUrl} - ${res.statusCode}`, {
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      requestId: req.id,
+      durationMs: Number(durationMs),
+    })
+  })
+  next()
+})
+
 app.get('/', (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1
   res.json({
@@ -111,12 +135,20 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
   const databaseReady = mongoose.connection.readyState === 1
+  const avgLatency = (recentLatencies.reduce((a, b) => a + b, 0) / Math.max(recentLatencies.length, 1)).toFixed(2)
   res.status(databaseReady ? 200 : 503).json({
     status: databaseReady ? 'ok' : 'degraded',
     database: databaseReady ? 'connected' : 'disconnected',
     emailConfigured: Boolean(env.emailUser && env.emailPass),
     uptimeSeconds: Math.round(process.uptime()),
     requestId: req.id,
+    system: {
+      memory: process.memoryUsage(),
+      cpu: process.cpuUsage(),
+    },
+    metrics: {
+      apiLatencyAverageMs: Number(avgLatency),
+    }
   })
 })
 

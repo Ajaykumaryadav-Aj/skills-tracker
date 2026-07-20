@@ -51,6 +51,15 @@ const userSchema = new mongoose.Schema(
       default: 'user',
       index: true,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    lastActive: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 )

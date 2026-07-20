@@ -78,8 +78,8 @@ const startServer = async () => {
   server = await listen(env.port)
   logger.info({ port: env.port }, 'API server listening')
   server.keepAliveTimeout = 65000
-  server.headersTimeout = 66000
-  server.requestTimeout = 30000
+  server.headersTimeout = 200000
+  server.requestTimeout = 180000   // 3 min — allows AI roadmap generation to complete
 }
 
 if (env.nodeEnv !== 'test') {

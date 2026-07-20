@@ -7,7 +7,8 @@ dotenv.config()
 
 const seedRoadmapTemplates = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/skills-tracker')
+    const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/skills-tracker'
+    await mongoose.connect(dbUri)
     console.log('Connected to MongoDB')
 
     // Clear existing templates

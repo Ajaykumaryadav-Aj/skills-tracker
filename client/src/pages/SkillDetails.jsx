@@ -31,8 +31,13 @@ export default function SkillDetails() {
   const [topicModalOpen, setTopicModalOpen] = useState(false)
   const [editingTopic, setEditingTopic] = useState(null)
   const [deletingTopic, setDeletingTopic] = useState(null)
-  const [topicFilters, setTopicFilters] = useState({ search: '', status: '', priority: '', sort: 'order' })
+  const [topicFilters, setTopicFilters] = useState({ search: '', status: '', priority: '', sort: 'order', page: 1, limit: 10 })
+  const [topicPagination, setTopicPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 })
   const [draggedTopicId, setDraggedTopicId] = useState(null)
+
+  const handleTopicPageChange = (newPage) => {
+    setTopicFilters((current) => ({ ...current, page: newPage }))
+  }
 
   useEffect(() => {
     let ignore = false
@@ -43,6 +48,9 @@ export default function SkillDetails() {
         if (!ignore) {
           setSkill(res.data.skill)
           setTopics(topicsRes.data.topics || [])
+          if (topicsRes.data.pagination) {
+            setTopicPagination(topicsRes.data.pagination)
+          }
         }
       } catch (err) {
         if (!ignore) setError(err.response?.data?.message || 'Unable to load skill')
@@ -59,6 +67,9 @@ export default function SkillDetails() {
       const [res, topicsRes] = await Promise.all([skillService.getSkill(id), skillService.getTopics(id, topicFilters)])
       setSkill(res.data.skill)
       setTopics(topicsRes.data.topics || [])
+      if (topicsRes.data.pagination) {
+        setTopicPagination(topicsRes.data.pagination)
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to refresh skill')
     }
@@ -200,10 +211,10 @@ export default function SkillDetails() {
       <section className="grid gap-4" aria-labelledby="topics-title">
         <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase text-emerald-dark-brand">Learning units</p><h2 id="topics-title" className="text-2xl font-black text-ink">Topics</h2></div><button type="button" onClick={openCreateTopic} className={cn(ui.button.base, ui.button.primary)}><Plus size={16} /> Add topic</button></div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className={ui.field.control}><input className={ui.field.input} value={topicFilters.search} onChange={(event) => setTopicFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search topics" /></div>
-          <SelectBox value={topicFilters.status} onChange={(event) => setTopicFilters((current) => ({ ...current, status: event.target.value }))}><option value="">All statuses</option>{topicStatuses.map((status) => <option key={status}>{status}</option>)}</SelectBox>
-          <SelectBox value={topicFilters.priority} onChange={(event) => setTopicFilters((current) => ({ ...current, priority: event.target.value }))}><option value="">All priorities</option>{topicPriorities.map((priority) => <option key={priority}>{priority}</option>)}</SelectBox>
-          <SelectBox value={topicFilters.sort} onChange={(event) => setTopicFilters((current) => ({ ...current, sort: event.target.value }))}><option value="order">Order</option><option value="dueDate">Due date</option><option value="title">Title</option><option value="status">Status</option></SelectBox>
+          <div className={ui.field.control}><input className={ui.field.input} value={topicFilters.search} onChange={(event) => setTopicFilters((current) => ({ ...current, search: event.target.value, page: 1 }))} placeholder="Search topics" /></div>
+          <SelectBox value={topicFilters.status} onChange={(event) => setTopicFilters((current) => ({ ...current, status: event.target.value, page: 1 }))}><option value="">All statuses</option>{topicStatuses.map((status) => <option key={status}>{status}</option>)}</SelectBox>
+          <SelectBox value={topicFilters.priority} onChange={(event) => setTopicFilters((current) => ({ ...current, priority: event.target.value, page: 1 }))}><option value="">All priorities</option>{topicPriorities.map((priority) => <option key={priority}>{priority}</option>)}</SelectBox>
+          <SelectBox value={topicFilters.sort} onChange={(event) => setTopicFilters((current) => ({ ...current, sort: event.target.value, page: 1 }))}><option value="order">Order</option><option value="dueDate">Due date</option><option value="title">Title</option><option value="status">Status</option></SelectBox>
         </div>
         {!topics.length ? (
           <div className={ui.empty}><BookOpenCheck size={24} /><p>No topics match this view.</p></div>
@@ -214,7 +225,7 @@ export default function SkillDetails() {
               return (
                 <article className={cn(ui.card, 'reveal-item grid gap-3 p-4')} draggable onDragStart={() => handleDragStart(topic._id)} onDragOver={(event) => event.preventDefault()} onDrop={() => handleDrop(topic._id)} style={{ '--reveal-delay': `${index * 55}ms` }} key={topic._id}>
                   <button type="button" className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 text-left" onClick={() => setExpandedTopics((current) => ({ ...current, [topic._id]: !expanded }))} aria-expanded={expanded} aria-controls={`topic-${topic._id}`}>
-                    <span className="inline-flex items-center gap-1 rounded-card bg-surface-raised px-2 py-1 text-xs font-black text-ink-soft"><GripVertical size={14} /> {String(index + 1).padStart(2, '0')}</span>
+                    <span className="inline-flex items-center gap-1 rounded-card bg-surface-raised px-2 py-1 text-xs font-black text-ink-soft"><GripVertical size={14} /> {String((topicPagination.page - 1) * topicPagination.limit + index + 1).padStart(2, '0')}</span>
                     <span className="min-w-0"><strong className="block truncate text-ink">{topic.title}</strong><small className={cn(ui.badge.base, statusTone(topic.status), 'mt-2')}>{topic.status}</small></span>
                     <span className={cn(ui.badge.base, statusTone(topic.priority || 'Medium'))}>{topic.priority || 'Medium'}</span>
                     <ChevronDown size={19} className={cn('text-ink-muted transition', expanded && 'rotate-180')} aria-hidden="true" />
@@ -235,6 +246,22 @@ export default function SkillDetails() {
                 </article>
               )
             })}
+
+            {/* Pagination Controls */}
+            {topicPagination.totalPages > 1 && (
+              <nav className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm text-ink-soft" aria-label="Topics pagination">
+                <p>Showing <strong className="text-ink">{(topicPagination.page - 1) * topicPagination.limit + 1}-{Math.min(topicPagination.page * topicPagination.limit, topicPagination.total)}</strong> of {topicPagination.total}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => handleTopicPageChange(topicPagination.page - 1)} disabled={topicPagination.page <= 1} className={cn(ui.button.base, ui.button.secondary, 'min-h-9 px-3')}>Prev</button>
+                  {Array.from({ length: topicPagination.totalPages || 1 }, (_, index) => index + 1).map((page) => (
+                    <button key={page} type="button" onClick={() => handleTopicPageChange(page)} aria-current={page === topicPagination.page ? 'page' : undefined} className={cn('grid min-h-9 min-w-9 place-items-center rounded-card border px-3 text-sm font-black transition', page === topicPagination.page ? 'border-emerald-brand bg-emerald-brand text-white' : 'border-line bg-white text-ink hover:border-emerald-brand hover:bg-emerald-pale')}>
+                      {page}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => handleTopicPageChange(topicPagination.page + 1)} disabled={topicPagination.page >= topicPagination.totalPages} className={cn(ui.button.base, ui.button.secondary, 'min-h-9 px-3')}>Next</button>
+                </div>
+              </nav>
+            )}
           </div>
         )}
       </section>

@@ -1,6 +1,17 @@
 import mongoose from 'mongoose'
 
-export const ACTIVITY_TYPES = ['skill-created', 'topic-completed', 'revision-completed', 'achievement-unlocked', 'xp-gained']
+export const ACTIVITY_TYPES = [
+  'skill-created',
+  'topic-completed',
+  'revision-completed',
+  'achievement-unlocked',
+  'xp-gained',
+  'team-joined',
+  'team-left',
+  'session-added',
+  'badge-earned',
+  'goal-completed'
+]
 
 const activitySchema = new mongoose.Schema(
   {

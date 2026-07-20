@@ -10,6 +10,7 @@ import { successResponse } from '../utils/apiResponse.js'
 import httpError from '../utils/httpError.js'
 import { logAuditEvent } from '../utils/auditLogger.js'
 import { uploadStream, deleteFile } from '../services/storage.service.js'
+import { logToFile } from '../utils/fileLogger.js'
 
 const getUserOrThrow = async (userId, select = publicUserFields) => {
   const user = await User.findById(userId).select(select)
@@ -74,6 +75,11 @@ export const uploadProfileAvatar = async (req, res, next) => {
 
     const updatedUser = await getUserOrThrow(req.user.id)
     await logAuditEvent(req, req.user.id, 'profile-avatar-upload', { publicId: result.publicId })
+    logToFile('uploads', 'info', `Profile avatar uploaded for user ${req.user.id}`, {
+      filename: req.file.originalname,
+      size: req.file.size,
+      publicId: result.publicId,
+    })
 
     return successResponse(res, 'Avatar uploaded successfully.', { user: updatedUser })
   } catch (err) {
@@ -133,6 +139,7 @@ export const changePassword = async (req, res, next) => {
     user.updatedAt = new Date()
     await user.save()
 
+
     await logAuditEvent(req, req.user.id, 'password-change-authorized', { email: user.email })
 
     return successResponse(res, 'Password changed successfully.')
@@ -140,3 +147,5 @@ export const changePassword = async (req, res, next) => {
     next(err)
   }
 }
+
+

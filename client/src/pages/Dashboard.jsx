@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Award, Bell, BookOpenCheck, CalendarDays, CheckCircle2, Clock3, Flame, LayoutDashboard, Medal, Plus, Save, Tags, Target, TrendingUp, Trophy } from 'lucide-react'
+import { Activity, Award, BookOpenCheck, CalendarDays, CheckCircle2, Clock3, Flame, LayoutDashboard, Medal, Plus, RotateCcw, Save, Tags, Target, TrendingUp, Trophy } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
 import PageHeader from '../components/PageHeader'
 import Toast from '../components/Toast'
@@ -65,7 +65,7 @@ export default function Dashboard() {
   const [revisionStats, setRevisionStats] = useState({ widgets: { dueToday: 0, upcoming: 0, missed: 0, completed: 0, completionRate: 0 }, analytics: { completedThisWeek: 0 } })
   const [gamification, setGamification] = useState(null)
   const [aiRecommendations, setAiRecommendations] = useState(null)
-  const [collaboration, setCollaboration] = useState({ notifications: [], unreadNotifications: 0, teams: [], activity: [], reminders: [] })
+  const [collaboration, setCollaboration] = useState({ activity: [] })
   const [goalForm, setGoalForm] = useState({ dailyStudyHours: 1, weeklyStudyHours: 7, monthlyStudyHours: 30 })
   const [selectedDate, setSelectedDate] = useState('')
   const [savingGoals, setSavingGoals] = useState(false)
@@ -202,7 +202,7 @@ export default function Dashboard() {
         <MetricCard label="Weekly progress" value={formatHours(progress?.goalProgress?.week?.hours)} detail={`${progress?.goalProgress?.week?.percent || 0}% of goal`} icon={TrendingUp} tone="blue" progress={progress?.goalProgress?.week?.percent || 0} />
         <MetricCard label="Monthly progress" value={formatHours(progress?.goalProgress?.month?.hours)} detail={`${progress?.goalProgress?.month?.percent || 0}% of goal`} icon={CalendarDays} tone="coral" progress={progress?.goalProgress?.month?.percent || 0} />
         <MetricCard label="Total notes" value={knowledgeStats.totalNotes || 0} detail={`${knowledgeStats.recentlyUpdatedNotes?.length || 0} recently updated`} icon={BookOpenCheck} tone="emerald" progress={Math.min(100, knowledgeStats.totalNotes || 0)} />
-        <MetricCard label="Revisions due" value={revisionStats.widgets?.dueToday || 0} detail={`${revisionStats.widgets?.missed || 0} missed`} icon={Bell} tone="coral" progress={Math.min(100, (revisionStats.widgets?.dueToday || 0) * 10)} />
+        <MetricCard label="Revisions due" value={revisionStats.widgets?.dueToday || 0} detail={`${revisionStats.widgets?.missed || 0} missed`} icon={RotateCcw} tone="coral" progress={Math.min(100, (revisionStats.widgets?.dueToday || 0) * 10)} />
       </section>
 
       <div className="grid gap-5 xl:grid-cols-3">
@@ -229,20 +229,9 @@ export default function Dashboard() {
         </div>
       </Panel>
 
-      <div className="grid gap-5 xl:grid-cols-4">
-        <Panel eyebrow="Collaboration" title="Notifications" icon={Bell}>
-          <strong className="text-3xl font-black text-ink">{collaboration.unreadNotifications || 0}</strong>
-          <p className="text-sm text-ink-soft">Unread alerts</p>
-          <Link to="/notifications" className={cn(ui.button.base, ui.button.secondary, 'w-fit')}>Open alerts</Link>
-        </Panel>
-        <Panel eyebrow="Teams" title="Workspaces" icon={Activity}>
-          {collaboration.teams?.length ? collaboration.teams.slice(0, 3).map((team) => <div className="rounded-card border border-line bg-white p-3" key={team._id}><strong className="block text-ink">{team.name}</strong><span className="text-sm text-ink-soft">{team.members?.length || 0} members</span></div>) : <p className="text-sm text-ink-soft">No teams yet.</p>}
-        </Panel>
-        <Panel eyebrow="Reminders" title="Upcoming" icon={CalendarDays}>
-          {collaboration.reminders?.length ? collaboration.reminders.slice(0, 3).map((reminder) => <div className="rounded-card border border-line bg-white p-3" key={reminder._id}><strong className="block text-ink">{reminder.title}</strong><span className="text-sm text-ink-soft">{formatDate(reminder.date)} at {reminder.time}</span></div>) : <p className="text-sm text-ink-soft">No reminders scheduled.</p>}
-        </Panel>
-        <Panel eyebrow="Activity" title="Latest" icon={Activity}>
-          {collaboration.activity?.length ? collaboration.activity.slice(0, 3).map((item) => <div className="rounded-card border border-line bg-white p-3" key={item._id}><strong className="block text-ink">{item.title}</strong><span className="text-sm text-ink-soft">{formatDate(item.createdAt)}</span></div>) : <p className="text-sm text-ink-soft">No collaboration activity yet.</p>}
+      <div className="grid gap-5 xl:grid-cols-1">
+        <Panel eyebrow="Activity" title="Latest activity" icon={Activity}>
+          {collaboration.activity?.length ? collaboration.activity.slice(0, 5).map((item) => <div className="rounded-card border border-line bg-white p-3" key={item._id}><strong className="block text-ink">{item.title}</strong><span className="text-sm text-ink-soft">{formatDate(item.createdAt)}</span></div>) : <p className="text-sm text-ink-soft">No collaboration activity yet.</p>}
         </Panel>
       </div>
 

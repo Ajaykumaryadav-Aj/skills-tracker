@@ -472,12 +472,16 @@ export const getTopics = async (req, res, next) => {
     if (!skill) return res.status(404).json({ message: 'Skill not found' })
     await ensureTopicDocuments(skill)
 
-    const { search = '', status = '', priority = '', sort = 'order' } = req.query
+    const { search = '', status = '', priority = '', sort = 'order', page: requestedPage, limit: requestedLimit } = req.query
     const query = topicOwnerFilter(req.user.id, req.params.id)
     const searchTerm = String(search).trim()
     if (searchTerm) query.title = new RegExp(escapeRegex(searchTerm), 'i')
     if (status) query.status = String(status)
     if (priority) query.priority = String(priority)
+
+    const page = getPositiveInteger(requestedPage, 1)
+    const limit = Math.min(getPositiveInteger(requestedLimit, 10), 100)
+    const isPaginated = requestedPage !== undefined || requestedLimit !== undefined
 
     const sortOptions = {
       order: { order: 1, createdAt: 1 },
@@ -485,8 +489,28 @@ export const getTopics = async (req, res, next) => {
       title: { title: 1, order: 1 },
       status: { status: 1, order: 1 },
     }
-    const topics = await Topic.find(query).sort(sortOptions[sort] || sortOptions.order).lean()
-    res.json({ topics: topics.map((topic) => hydrateTopicFromSkill(topic, skill)) })
+
+    const topicsQuery = Topic.find(query).sort(sortOptions[sort] || sortOptions.order)
+    if (isPaginated) {
+      topicsQuery.skip((page - 1) * limit).limit(limit)
+    }
+
+    const [topics, total] = await Promise.all([
+      topicsQuery.lean(),
+      Topic.countDocuments(query),
+    ])
+
+    res.json({
+      topics: topics.map((topic) => hydrateTopicFromSkill(topic, skill)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(Math.ceil(total / limit), 1),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1,
+      },
+    })
   } catch (err) {
     next(err)
   }

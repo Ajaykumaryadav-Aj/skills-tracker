@@ -34,7 +34,7 @@ function Field({ id, label, icon: Icon, children }) {
 function SelectField({ id, label, value, onChange, disabled, children }) {
   return (
     <Field id={id} label={label}>
-      <select className={ui.field.input} id={id} value={value} onChange={onChange} disabled={disabled}>{children}</select>
+      <select className={cn(ui.field.input, 'appearance-none')} id={id} value={value} onChange={onChange} disabled={disabled}>{children}</select>
       <ChevronDown className="shrink-0 text-ink-muted" size={16} />
     </Field>
   )
@@ -45,7 +45,8 @@ export default function LearningLogs() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [filter, setFilter] = useState({ skillId: '', topicId: '', sessionType: '', startDate: '', endDate: '' })
+  const [filter, setFilter] = useState({ skillId: '', topicId: '', sessionType: '', startDate: '', endDate: '', search: '', sort: 'latest', page: 1, limit: 10 })
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 })
   const [modalOpen, setModalOpen] = useState(false)
   const [editingLog, setEditingLog] = useState(null)
   const [form, setForm] = useState({ skillId: '', topicId: '', date: '', startTime: '', endTime: '', sessionType: 'Study', notes: '' })
@@ -61,6 +62,9 @@ export default function LearningLogs() {
     try {
       const res = await logService.getLearningLogs(cleanFilters(params))
       setLogs(res.data.logs || [])
+      if (res.data.pagination) {
+        setPagination(res.data.pagination)
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to load logs')
     } finally {
@@ -68,23 +72,30 @@ export default function LearningLogs() {
     }
   }, [cleanFilters])
 
+  // Reload logs whenever filters change
   useEffect(() => {
     let ignore = false
-    const loadInitialData = async () => {
+    const load = async () => {
+      if (!ignore) await loadLogs(filter)
+    }
+    load()
+    return () => { ignore = true }
+  }, [filter, loadLogs])
+
+  useEffect(() => {
+    let ignore = false
+    const loadInitialSkills = async () => {
       try {
-        const [skillsResponse, logsResponse] = await Promise.all([skillService.getAllSkills(), logService.getLearningLogs({})])
+        const skillsResponse = await skillService.getAllSkills()
         if (!ignore) {
           setSkills(skillsResponse.data.skills || [])
-          setLogs(logsResponse.data.logs || [])
           setError(null)
         }
       } catch (err) {
         if (!ignore) setError(err.response?.data?.message || 'Unable to load learning data')
-      } finally {
-        if (!ignore) setLoading(false)
       }
     }
-    loadInitialData()
+    loadInitialSkills()
     return () => { ignore = true }
   }, [])
 
@@ -180,9 +191,18 @@ export default function LearningLogs() {
     }
   }
 
-  const updateFilter = (key, value) => setFilter((current) => ({ ...current, [key]: value, ...(key === 'skillId' ? { topicId: '' } : {}) }))
-  const resetFilters = () => { const next = { skillId: '', topicId: '', sessionType: '', startDate: '', endDate: '' }; setFilter(next); loadLogs(next) }
-  const filteredLogs = logs.slice().sort((a, b) => new Date(b.date) - new Date(a.date))
+  const updateFilter = (key, value) => setFilter((current) => ({ ...current, [key]: value, page: 1, ...(key === 'skillId' ? { topicId: '' } : {}) }))
+  const resetFilters = () => {
+    setFilter({ skillId: '', topicId: '', sessionType: '', startDate: '', endDate: '', search: '', sort: 'latest', page: 1, limit: 10 })
+  }
+
+  const handlePageChange = (nextPage) => {
+    setFilter((current) => ({ ...current, page: nextPage }))
+  }
+
+  const pages = Array.from({ length: pagination.totalPages || 1 }, (_, index) => index + 1)
+  const startItem = (pagination.page - 1) * pagination.limit + 1
+  const endItem = Math.min(pagination.page * pagination.limit, pagination.total)
 
   return (
     <div className="grid gap-5">
@@ -190,39 +210,93 @@ export default function LearningLogs() {
       <PageHeader
         eyebrow="Learning history"
         title="Daily learning logs"
-        description={`${logs.length} sessions and ${formatMinutes(totalMinutes)} recorded.`}
+        description={`${pagination.total || 0} sessions and ${formatMinutes(totalMinutes)} recorded on this page.`}
         icon={Clock3}
         actions={(
           <>
-            <button type="button" onClick={handleExport} className={cn(ui.button.base, ui.button.secondary)}><Download size={17} /> Export CSV</button>
-            <button type="button" onClick={openCreateModal} className={cn(ui.button.base, ui.button.primary)}><Plus size={17} /> Add session</button>
+            <button type="button" onClick={handleExport} className={cn(ui.button.base, ui.button.secondary, 'w-full sm:w-auto')}><Download size={17} /> Export CSV</button>
+            <button type="button" onClick={openCreateModal} className={cn(ui.button.base, ui.button.primary, 'w-full sm:w-auto')}><Plus size={17} /> Add session</button>
           </>
         )}
       />
 
       <section className={cn(ui.panel, 'reveal-item grid gap-4')} aria-labelledby="log-filter-title">
-        <div className="flex items-start gap-3"><Filter size={18} className="mt-1 text-emerald-dark-brand" /><div><h2 id="log-filter-title" className="text-lg font-black text-ink">Filter sessions</h2><p className="mt-1 text-sm text-ink-soft">Narrow the history by date, skill, topic, or type.</p></div></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex items-start gap-3"><Filter size={18} className="mt-1 text-emerald-dark-brand" /><div><h2 id="log-filter-title" className="text-lg font-black text-ink">Filter & Search</h2><p className="mt-1 text-sm text-ink-soft">Narrow and search your study log entries.</p></div></div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          <div>
+            <label className={ui.field.label} htmlFor="search-logs-input">Search Notes</label>
+            <div className={ui.field.control}>
+              <input
+                id="search-logs-input"
+                type="text"
+                className={ui.field.input}
+                placeholder="Search notes content..."
+                value={filter.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+              />
+            </div>
+          </div>
+          <SelectField id="log-sort" label="Sort By" value={filter.sort} onChange={(event) => updateFilter('sort', event.target.value)}>
+            <option value="latest">Latest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="duration">Longest duration</option>
+            <option value="notes">Notes alphabetical</option>
+          </SelectField>
           <SelectField id="log-skill" label="Skill" value={filter.skillId} onChange={(event) => updateFilter('skillId', event.target.value)}><option value="">All skills</option>{skills.map((skill) => <option key={skill._id} value={skill._id}>{skill.title}</option>)}</SelectField>
           <SelectField id="log-topic" label="Topic" value={filter.topicId} onChange={(event) => updateFilter('topicId', event.target.value)} disabled={!filter.skillId}><option value="">All topics</option>{filterTopicOptions.map((topic) => <option key={topic._id} value={topic._id}>{topic.title}</option>)}</SelectField>
           <SelectField id="log-type" label="Type" value={filter.sessionType} onChange={(event) => updateFilter('sessionType', event.target.value)}><option value="">All types</option>{sessionTypes.map((type) => <option key={type}>{type}</option>)}</SelectField>
           <Field id="log-start" label="Start date" icon={CalendarDays}><input className={ui.field.input} id="log-start" type="date" value={filter.startDate} onChange={(event) => updateFilter('startDate', event.target.value)} /></Field>
           <Field id="log-end" label="End date" icon={CalendarDays}><input className={ui.field.input} id="log-end" type="date" value={filter.endDate} onChange={(event) => updateFilter('endDate', event.target.value)} /></Field>
-          <div className="flex flex-wrap items-end gap-2"><button type="button" onClick={() => loadLogs(filter)} className={cn(ui.button.base, ui.button.primary)}><Filter size={16} /> Apply</button><button type="button" onClick={resetFilters} className={cn(ui.button.base, ui.button.secondary)}><RotateCcw size={16} /> Reset</button></div>
+          <div className="flex flex-wrap items-end gap-2 col-span-full"><button type="button" onClick={resetFilters} className={cn(ui.button.base, ui.button.secondary, 'w-full sm:w-auto')}><RotateCcw size={16} /> Reset Filters</button></div>
         </div>
       </section>
 
       {error && <div className="rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">{error}</div>}
       {loading ? (
         <div className={cn(ui.panel, 'grid gap-3')} role="status" aria-label="Loading learning logs">{Array.from({ length: 5 }).map((_, index) => <i className="skeleton-shimmer h-10 rounded-card" key={index} />)}</div>
-      ) : filteredLogs.length === 0 ? (
+      ) : logs.length === 0 ? (
         <div className={ui.empty}><Clock3 size={25} /><p>No learning sessions found.</p></div>
       ) : (
-        <section className={cn(ui.panel, 'reveal-item')} aria-label="Learning sessions">
-          <div className={ui.table.wrap}>
+        <section className={cn(ui.panel, 'reveal-item grid gap-4')} aria-label="Learning sessions">
+          {/* Card list view for mobile screens */}
+          <div className="grid gap-4 md:hidden">
+            {logs.map((log) => (
+              <article key={log._id} className={cn(ui.card, 'p-4 grid gap-3 min-w-0')}>
+                <div className="flex items-center justify-between gap-2 border-b border-line pb-2">
+                  <span className="text-xs font-extrabold text-ink-soft">{new Date(log.date).toLocaleDateString()}</span>
+                  <span className={cn(ui.badge.base, statusTone(log.sessionType || 'Study'))}>{log.sessionType || 'Study'}</span>
+                </div>
+                <div className="grid gap-1 min-w-0">
+                  <span className="text-xs font-bold uppercase text-ink-muted">Skill & Topic</span>
+                  <strong className="text-ink leading-snug break-words">{log.skill?.title || 'Unknown skill'}</strong>
+                  <span className="text-sm text-ink-soft break-words">{log.topic?.title || 'Deleted Topic'}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-line/60">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-ink-soft">
+                    <Clock3 size={15} />
+                    <span>{log.startTime && log.endTime ? `${toTimeInput(log.startTime)}-${toTimeInput(log.endTime)}` : '-'}</span>
+                    <span className="mx-1 text-line-strong">•</span>
+                    <span className="font-extrabold text-emerald-dark-brand">{formatMinutes(log.duration)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => openEditModal(log)} className={ui.button.icon} aria-label="Edit session" title="Edit session"><Pencil size={15} /></button>
+                    <button type="button" onClick={() => handleDelete(log._id)} className={cn(ui.button.icon, 'border-red-200 text-red-700 hover:bg-red-50')} aria-label="Delete session" title="Delete session"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+                {log.notes && (
+                  <div className="mt-1 rounded bg-surface-raised p-2.5 text-xs leading-normal text-ink-soft break-all">
+                    <strong>Notes:</strong> {log.notes}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+
+          {/* Table view for desktop screens */}
+          <div className={cn(ui.table.wrap, 'hidden md:block')}>
             <table className={ui.table.table}>
               <thead><tr>{['Date', 'Time', 'Type', 'Skill', 'Topic', 'Duration', 'Notes', 'Actions'].map((heading) => <th key={heading} className={ui.table.th}>{heading}</th>)}</tr></thead>
-              <tbody>{filteredLogs.map((log) => (
+              <tbody>{logs.map((log) => (
                 <tr key={log._id}>
                   <td className={ui.table.td}>{new Date(log.date).toLocaleDateString()}</td>
                   <td className={ui.table.td}>{log.startTime && log.endTime ? `${toTimeInput(log.startTime)}-${toTimeInput(log.endTime)}` : '-'}</td>
@@ -236,6 +310,22 @@ export default function LearningLogs() {
               ))}</tbody>
             </table>
           </div>
+
+          {/* Pagination controls */}
+          {pagination.totalPages > 1 && (
+            <nav className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm text-ink-soft" aria-label="Logs pagination">
+              <p>Showing <strong className="text-ink">{startItem}-{endItem}</strong> of {pagination.total}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page <= 1} className={cn(ui.button.base, ui.button.secondary, 'min-h-9 px-3')}>Prev</button>
+                {pages.map((page) => (
+                  <button key={page} type="button" onClick={() => handlePageChange(page)} aria-current={page === pagination.page ? 'page' : undefined} className={cn('grid min-h-9 min-w-9 place-items-center rounded-card border px-3 text-sm font-black transition', page === pagination.page ? 'border-emerald-brand bg-emerald-brand text-white' : 'border-line bg-white text-ink hover:border-emerald-brand hover:bg-emerald-pale')}>
+                    {page}
+                  </button>
+                ))}
+                <button type="button" onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages} className={cn(ui.button.base, ui.button.secondary, 'min-h-9 px-3')}>Next</button>
+              </div>
+            </nav>
+          )}
         </section>
       )}
 

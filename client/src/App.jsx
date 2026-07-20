@@ -3,7 +3,6 @@ import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from 'react-
 import {
   ArrowRight,
   BarChart3,
-  Bell,
   Bot,
   BookOpenCheck,
   BookOpenText,
@@ -18,12 +17,13 @@ import {
   RotateCcw,
   UserRound,
   UserPlus,
-  Users,
   X,
+  Search,
 } from 'lucide-react'
 import AppErrorBoundary from './components/AppErrorBoundary'
 import { AuthProvider } from './context/AuthContext'
 import { AuthContext } from './context/authContextValue'
+import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './routes/ProtectedRoute'
 import { cn, ui } from './utils/tw'
 
@@ -38,33 +38,28 @@ const Register = lazy(() => import('./pages/Register'))
 const VerifyOtp = lazy(() => import('./pages/VerifyOtp'))
 const Profile = lazy(() => import('./pages/Profile'))
 const PublicProfile = lazy(() => import('./pages/PublicProfile'))
-const Notifications = lazy(() => import('./pages/Notifications'))
 const RoadmapDetail = lazy(() => import('./pages/RoadmapDetail'))
 const RoadmapForm = lazy(() => import('./pages/RoadmapForm'))
 const Roadmaps = lazy(() => import('./pages/Roadmaps'))
 const SkillDetails = lazy(() => import('./pages/SkillDetails'))
 const SkillForm = lazy(() => import('./pages/SkillForm'))
 const Skills = lazy(() => import('./pages/Skills'))
-const Teams = lazy(() => import('./pages/Teams'))
 const UserRoadmapDetail = lazy(() => import('./pages/UserRoadmapDetail'))
+const SearchPage = lazy(() => import('./pages/Search'))
 
 const routeMeta = [
   { match: (path) => path === '/', title: 'Skills Tracker', description: 'Track skills, topics, learning notes, resources, and progress.' },
-  { match: (path) => path.startsWith('/dashboard'), title: 'Dashboard | Skills Tracker', description: 'Review your learning progress and activity.' },
-  { match: (path) => path.startsWith('/skills'), title: 'Skills | Skills Tracker', description: 'Manage skills, topics, notes, and resources.' },
-  { match: (path) => path.startsWith('/roadmaps'), title: 'Roadmaps | Skills Tracker', description: 'Plan and monitor structured learning roadmaps.' },
-  { match: (path) => path.startsWith('/logs'), title: 'Learning Logs | Skills Tracker', description: 'Record and review learning sessions.' },
-  { match: (path) => path.startsWith('/notes'), title: 'Notes | Skills Tracker', description: 'Manage topic notes, resources, and attachments.' },
-  { match: (path) => path.startsWith('/revisions'), title: 'Revisions | Skills Tracker', description: 'Review topics using spaced repetition.' },
-  { match: (path) => path.startsWith('/ai'), title: 'AI Assistant | Skills Tracker', description: 'Generate learning plans, quizzes, summaries, and recommendations.' },
-  { match: (path) => path.startsWith('/profile'), title: 'Profile | Skills Tracker', description: 'Manage your Skills Tracker profile and account.' },
-  { match: (path) => path.startsWith('/teams'), title: 'Teams | Skills Tracker', description: 'Collaborate with learning teams.' },
-  { match: (path) => path.startsWith('/activity'), title: 'Activity | Skills Tracker', description: 'Review learning activity.' },
-  { match: (path) => path.startsWith('/notifications'), title: 'Notifications | Skills Tracker', description: 'Manage notifications and reminders.' },
-  { match: (path) => path.startsWith('/public'), title: 'Public Profile | Skills Tracker', description: 'View a public learning profile.' },
+  { match: (path) => path.startsWith('/dashboard'), title: 'Dashboard | Skills Tracker', description: 'View learning progress, streaks, and analytics.' },
+  { match: (path) => path.startsWith('/skills'), title: 'Skills | Skills Tracker', description: 'Manage and track your learning skills.' },
+  { match: (path) => path.startsWith('/roadmaps'), title: 'Roadmaps | Skills Tracker', description: 'Explore structured roadmap guides.' },
+  { match: (path) => path.startsWith('/logs'), title: 'Learning Logs | Skills Tracker', description: 'Log daily study sessions and track history.' },
+  { match: (path) => path.startsWith('/revisions'), title: 'Revisions | Skills Tracker', description: 'Manage topic revision schedules.' },
+  { match: (path) => path.startsWith('/notes'), title: 'Notes | Skills Tracker', description: 'Search and read learning notes.' },
+  { match: (path) => path.startsWith('/ai'), title: 'AI Assistant | Skills Tracker', description: 'Generate AI study plans, debug code, and take notes.' },
   { match: (path) => path.startsWith('/login'), title: 'Sign In | Skills Tracker', description: 'Sign in to your Skills Tracker account.' },
   { match: (path) => path.startsWith('/register'), title: 'Create Account | Skills Tracker', description: 'Create a Skills Tracker account.' },
   { match: (path) => path.startsWith('/verify-otp'), title: 'Verify Email | Skills Tracker', description: 'Verify your Skills Tracker account email.' },
+  { match: (path) => path.startsWith('/search'), title: 'Global Search | Skills Tracker', description: 'Search skills, topics, notes, and sessions.' },
 ]
 
 const primaryLinks = [
@@ -76,8 +71,7 @@ const primaryLinks = [
   { to: '/revisions', label: 'Revisions', icon: RotateCcw },
   { to: '/notes', label: 'Notes', icon: BookOpenText },
   { to: '/ai', label: 'AI', icon: Bot },
-  { to: '/teams', label: 'Teams', icon: Users },
-  { to: '/notifications', label: 'Alerts', icon: Bell },
+  { to: '/search', label: 'Search', icon: Search },
 ]
 
 function RouteMeta() {
@@ -119,7 +113,7 @@ function Home() {
     { to: '/logs', title: 'Learning history', detail: 'Record or review focused sessions', icon: Clock3, tone: 'blue' },
     { to: '/revisions', title: 'Smart revisions', detail: 'Review due topics with spaced repetition', icon: RotateCcw, tone: 'coral' },
     { to: '/notes', title: 'Knowledge hub', detail: 'Manage notes and resources', icon: BookOpenText, tone: 'emerald' },
-    { to: '/ai', title: 'AI assistant', detail: 'Generate plans, quizzes and recommendations', icon: Bot, tone: 'blue' },
+    { to: '/ai', title: 'AI assistant', detail: 'Debug code, generate study plans, and notes', icon: Bot, tone: 'blue' },
   ]
 
   return (
@@ -204,7 +198,8 @@ function Navigation() {
 
             <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 pt-4 xl:mt-0 xl:flex-nowrap xl:border-t-0 xl:pt-0">
               {user ? (
-                <div className="relative w-full xl:w-auto" ref={accountRef}>
+                <div className="flex items-center gap-2 w-full xl:w-auto">
+                  <div className="relative w-full xl:w-auto" ref={accountRef}>
                   <button
                     type="button"
                     onClick={() => setAccountOpen((current) => !current)}
@@ -240,7 +235,8 @@ function Navigation() {
                     </div>
                   )}
                 </div>
-              ) : (
+              </div>
+            ) : (
                 <>
                   <NavLink to="/login" className={navClass}><LogIn size={16} /> Sign in</NavLink>
                   <NavLink to="/register" className="inline-flex min-h-9 items-center gap-2 rounded-card border border-sun bg-sun px-3 py-2 text-sm font-black text-yellow-950 transition hover:brightness-105"><UserPlus size={16} /> Register</NavLink>
@@ -311,14 +307,13 @@ function AppRoutes() {
             <Route path="/notes" element={<Protected><Notes /></Protected>} />
             <Route path="/ai" element={<Protected><AIAssistant /></Protected>} />
             <Route path="/profile" element={<Protected><Profile /></Protected>} />
-            <Route path="/teams" element={<Protected><Teams /></Protected>} />
             <Route path="/activity" element={<Protected><ActivityFeed /></Protected>} />
-            <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
             <Route path="/roadmaps" element={<Protected><Roadmaps /></Protected>} />
             <Route path="/roadmaps/new" element={<Protected><RoadmapForm /></Protected>} />
             <Route path="/roadmaps/:id/edit" element={<Protected><RoadmapForm /></Protected>} />
             <Route path="/roadmaps/templates/:id" element={<Protected><RoadmapDetail /></Protected>} />
             <Route path="/roadmaps/:id" element={<Protected><UserRoadmapDetail /></Protected>} />
+            <Route path="/search" element={<Protected><SearchPage /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
@@ -330,9 +325,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppErrorBoundary>
-      <AuthProvider>
-        <BrowserRouter><AppRoutes /></BrowserRouter>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter><AppRoutes /></BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
     </AppErrorBoundary>
   )
 }
