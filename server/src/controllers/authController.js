@@ -163,13 +163,7 @@ export const login = async (req, res, next) => {
     if (!user) {
       await logAuditEvent(req, null, 'auth-login-failed', { email, reason: 'user-not-found' })
       logToFile('auth', 'warn', `Login failed (user not found) for ${email}`, { email })
-      await notifyAdmins(
-        'Failed Login Attempt',
-        `A failed login attempt (email not found) was recorded for email: ${email}`,
-        'System Alert',
-        { email }
-      ).catch(() => {})
-      throw httpError(401, 'Invalid credentials', 'INVALID_CREDENTIALS')
+      throw httpError(401, 'Email not found.', 'EMAIL_NOT_FOUND')
     }
 
     const match = await bcrypt.compare(req.body.password, user.password)
@@ -178,13 +172,7 @@ export const login = async (req, res, next) => {
     if (!match) {
       await logAuditEvent(req, user._id, 'auth-login-failed', { email: user.email, reason: 'invalid-password' })
       logToFile('auth', 'warn', `Login failed (invalid password) for ${email}`, { email })
-      await notifyAdmins(
-        'Failed Login Attempt',
-        `A failed login attempt (incorrect password) was recorded for user: ${email}`,
-        'System Alert',
-        { email, userId: user._id }
-      ).catch(() => {})
-      throw httpError(401, 'Invalid credentials', 'INVALID_CREDENTIALS')
+      throw httpError(401, 'Incorrect password.', 'INCORRECT_PASSWORD')
     }
 
     if (user.isActive === false) {
